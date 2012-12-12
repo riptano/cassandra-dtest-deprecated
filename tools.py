@@ -3,7 +3,6 @@ from ccmlib.node import Node
 from decorator  import decorator
 import cql
 import re
-import os
 
 from thrift.transport import TTransport, TSocket
 from thrift.protocol import TBinaryProtocol
