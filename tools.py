@@ -203,6 +203,19 @@ class since(object):
         wrapped.__doc__ = f.__doc__
         return wrapped
 
+from dtest import ENABLE_VNODES
+# Use this decorator to skip a test when vnodes are enabled.
+class no_vnodes(object):
+    def __call__(self, f):
+        def wrapped(obj):
+            if ENABLE_VNODES:
+                obj.skip("Test disable for vnodes")
+            f(obj)
+        wrapped.__name__ = f.__name__
+        wrapped.__doc__ = f.__doc__
+        return wrapped
+    
+
 class require(object):
     def __init__(self, msg):
         self.msg = msg
