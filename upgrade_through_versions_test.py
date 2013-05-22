@@ -40,8 +40,11 @@ class TestUpgradeThroughVersions(Tester):
         # Create a ring
         debug('Creating cluster (%s)' % versions[0])
         cluster.populate(3)
+        print 'INFO: TestUpgradeThroughVersions,  cluster.start()'
         cluster.start()
+        print 'INFO: TestUpgradeThroughVersions, cluster.nodelist()' 
         node1, node2, node3 = cluster.nodelist()
+        print 'INFO: TestUpgradeThroughVersions, nodes: ' + node1.name + ', ' + node2.name + ', ' + node3.name
         self.node2 = node2
 
         node1.watch_log_for('Listening for thrift clients...')
@@ -50,6 +53,10 @@ class TestUpgradeThroughVersions(Tester):
         conn.create_cf()
         time.sleep(.5)
         self._write_values()
+
+        ## print 'INFO: sleeping for 90 seconds .... check logs ...'
+        ## time.sleep(2) ## 90)
+        ## print 'INFO: done sleeping ...'
 
         # upgrade through versions
         for version in versions[1:]:

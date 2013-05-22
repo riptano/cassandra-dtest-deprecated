@@ -1,6 +1,7 @@
 from __future__ import with_statement
 import os, tempfile, sys, shutil, types, time, threading, ConfigParser, logging
 import fnmatch
+## import config
 
 from ccmlib.cluster import Cluster
 from ccmlib.node import Node
@@ -96,6 +97,12 @@ class Tester(TestCase):
                     pass
 
         self.cluster = self.__get_cluster()
+
+        # load command line arguments: 
+        #   --tc=dtest.logger.level:ERROR --tc=dtest.logger.class_name:com.datastax.bla
+        (log_level, class_name) = self.__parse_args()
+        self.cluster.set_log_level_per_class(log_level, class_name)
+
         self.__setup_cobertura()
         # the failure detector can be quite slow in such tests with quick start/stop
         self.cluster.set_configuration_options(values={'phi_convict_threshold': 5})
@@ -264,6 +271,53 @@ class Tester(TestCase):
                     cobertura_jar=cobertura_jar))
             f.write('JVM_OPTS="$JVM_OPTS -Dnet.sourceforge.cobertura.datafile='
                     '$CASSANDRA_HOME/build/cobertura/cassandra-dtest/cobertura.ser"\n')
+
+    #
+    # load command line arguments in format of 
+    # --tc=dtest.logger.level:ERROR --tc=dtest.logger.class_name:com.datastax.bla
+    #
+    def __parse_args(self):
+
+        log_level  = None
+        class_name = None
+
+        from testconfig import config
+
+        # process dtest
+        if config.has_key('dtest'):
+            dtest_config = config['dtest']
+            # process dtest.logger
+
+            if dtest_config.has_key('logger'):
+                dtest_logger_config = dtest_config['logger']
+
+                # process dtest.logger.level
+                if dtest_logger_config.has_key('level'):
+                    log_level  = config['dtest']['logger']['level']
+
+                # process dtest.logger.class_name
+                if dtest_logger_config.has_key('class_name'):
+                    class_name = config['dtest']['logger']['class_name']
+
+        # Error handling
+        if log_level != None and class_name != None:
+            print 'Opt: log_level  (dtest.logger.level)     : ' + str(log_level)
+            print 'Opt: class_name (dtest.logger.class_name): ' + str(class_name)
+            return (log_level, class_name)
+
+        else:
+            print >> sys.stderr, self.__usage()
+            exit(1)
+
+    # 
+    # usage function for __parse_args()
+    #
+    def __usage(self):
+        print 'Usage: '
+        print 'Nothing to setup - will use default rootLogger (INFO)'
+        print 'Setup rootLogger into <level>    : --tc=dtest.logger.level:<level>'
+        print 'Setup logger <level> for <class> : --tc=dtest.logger.level:<level> --tc=dtest.logger.class_name:<class>'
+
 
 
 class Runner(threading.Thread):
