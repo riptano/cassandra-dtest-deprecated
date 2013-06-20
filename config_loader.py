@@ -23,7 +23,7 @@ class ConfigLoader:
 
         if self.__DEBUG:
             print 'load_config_dist() :: load original config dictionary BEFORE modifying it'
-            self.__print_cong_dist(config)
+            self.__print_conf_dist(config)
 
         print '\n########################################################\n' if self.__DEBUG else None
         log_class = None
@@ -77,7 +77,7 @@ class ConfigLoader:
 
         if self.__DEBUG:
             print 'load_config_dist() :: load original config dictionary AFTER modifying it'
-            self.__print_cong_dist(config)
+            self.__print_conf_dist(config)
 
         return config
 
@@ -85,13 +85,16 @@ class ConfigLoader:
     #
     # Print the content of config dictionary
     #
-    def __print_cong_dist(self, dict):
+    def __print_conf_dist(self, dict):
         if self.__DEBUG:
+            print '#################################################################'
+            print '######################### MAP ###################################'
             for cases_key in dict.keys():
                 print 'Processing key = ' + cases_key + ' ....'
                 test_case_dist = dict[cases_key]
                 for entry_key in test_case_dist.keys():
                     print '\t' + entry_key + ' => ' + test_case_dist[entry_key]
+            print '#################################################################'
 
 
     def __usage(self):

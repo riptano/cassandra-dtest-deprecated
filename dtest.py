@@ -8,6 +8,8 @@ from ccmlib.node import Node
 from nose.exc import SkipTest
 from unittest import TestCase
 
+from config_loader import ConfigLoader
+
 logging.basicConfig(stream=sys.stderr)
 
 LOG_SAVED_DIR="logs"
@@ -38,6 +40,9 @@ def debug(msg):
 class Tester(TestCase):
 
     def __init__(self, *argv, **kwargs):
+        # specify initialial log level per class map 
+        self.per_test_log_class_map = None;
+
         # if False, then scan the log of each node for errors after every test.
         self.allow_log_errors = False
         try:
@@ -45,6 +50,28 @@ class Tester(TestCase):
             del kwargs['cluster_options']
         except KeyError:
             self.cluster_options = None
+
+        #######################################################################
+        ##
+        ## process command line configuration options, check if they are applied 
+        ## to the given test, and if so, extract test specific date
+        ##
+        #######################################################################
+
+        # using config loader
+        print '*** using config loader *** '
+        config_loader = ConfigLoader()
+        config_loader.enableDebug()
+        full_log_class_map = config_loader.load_config_dist()
+
+        # check if given config includes information of given tests
+        current_test_name = type(self).__name__
+        print '*** current_test_name =  ' + str(current_test_name) + ' ***'
+        
+        # and if so, setup cluster with per_test_log_class_map
+        if full_log_class_map.has_key( current_test_name ):
+            self.per_test_log_class_map = full_log_class_map[current_test_name];
+
         super(Tester, self).__init__(*argv, **kwargs)
 
 
@@ -98,10 +125,29 @@ class Tester(TestCase):
 
         self.cluster = self.__get_cluster()
 
-        # load command line arguments: 
-        #   --tc=dtest.logger.level:ERROR --tc=dtest.logger.class_name:com.datastax.bla
-        (log_level, class_name) = self.__parse_args()
-        self.cluster.set_log_level_per_class(log_level, class_name)
+        ##
+        ## using config loader
+        ## 
+        # print '*** using config loader *** '
+        # config_loader = ConfigLoader() 
+        # config_loader.enableDebug() 
+        # full_log_class_map = config_loader.load_config_dist()
+
+        ##
+        ## check if given config includes information of given tests
+        ##
+        # current_test_name = type(self).__name__
+        # print '*** current_test_name =  ' + str(current_test_name) + ' ***'
+        # per_test_log_class_map = None;
+        # if full_log_class_map.has_key( current_test_name ): 
+        #     per_test_log_class_map = full_log_class_map[current_test_name];
+            
+
+        ##
+        ## setup clustre with per_test_log_class_map 
+        ##
+        # if None != per_test_log_class_map:
+        #     self.cluster.set_log_level_per_class_map(per_test_log_class_map)
 
         self.__setup_cobertura()
         # the failure detector can be quite slow in such tests with quick start/stop
@@ -126,6 +172,15 @@ class Tester(TestCase):
             f.write(self.cluster.name)
         if DEBUG:
             self.cluster.set_log_level("DEBUG")
+
+        ###########################################################################################
+        ##
+        ## commented until integration to CCM is completed
+        ## self.cluster.set_log_level_to_class_map (self.per_test_log_class_map)
+        print 'Stab methond: setUp() self.cluster.set_log_level_to_class_map (self.per_test_log_class_map)'
+        ##
+        ###########################################################################################
+
         self.connections = []
         self.runners = []
 

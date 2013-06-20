@@ -13,6 +13,12 @@
     "test_update": {
         "org.apache.cassandra.cql": "TRACE",
         "org.apache.cassandra.db.ReadRepairVerbHandler": "ERROR"
+    },
+  
+    "ConfigTest": {
+        "rootLogger": "INFO",
+        "org.apache.cassandra.cql": "TRACE",
+        "org.apache.cassandra.db.ReadRepairVerbHandler": "ERROR"
     }
 }
 
