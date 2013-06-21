@@ -1,0 +1,29 @@
+There is a new feature introduced int cassandra-dtests - ability to specify certain options using command line 
+options as well as configuration files
+
+Describe the way of how Cassandra cluster can be configured to enable specific logger levels for the given class,   
+    classes, or package. Configuration may be done on per nosetest basis or fo all tests, similar for all tests, or  
+    different set for each tests, as well as certain overwrite options are provided                                  
+                                                                                                                      
+Usage: [options]                                                                                                    
+    --tc-file <Cassandra DTest Config> - specify configuration file. Default format is JSON                          
+    --tc-format json - specify configuration file format. Default format is JSON                                     
+    --tc=dtest.tests_to_log:"<List of test cases>" - specify list of nose test cases to apply logging.               
+          If provided and configuration file is specified - overwrites list of the test cases in config file.        
+          If provided and no configuration file specified - specify the list of test cases to apply logging          
+          If it is not provided -  logging is applied to all test cases                                              
+    --tc=dtest.log_level:<LEVEL> - specify log level                                                                 
+          if --tc=dtest.tests_to_log is specified - it is applied to the tests mentioned there                       
+          if --tc=dtest.class is not specified - it is applied to rootLogger                                         
+    --tc=dtest.class:<CLASS> - class to log or rootLogger. Must have to specify --tc=dtest.log_level                 
+          if is not specified or specified to rootLogger - set --tc=dtest.log_level to rootLogger                    
+                                                                                                                     
+Examples:                                                                                                            
+    --tc-file config.ini --tc-format ini --tc=dtest.tests_to_log:"update_test, delete_test"                          
+    --tc=dtest.log_level:DEBUG --tc=dtest.class:com.myclass  --tc=dtest.tests_to_log:"update_test"                   
+
+Combined example: 
+    nosetests -s -x ./upgrade_through_versions_test.py  --tc-file cassandra_dtest_config.json --tc-format json --tc=dtest.tests_to_log:"test_update, test_delete, ConfigTest" --tc=dtest.log_level:TRACE --tc=dtest.class:com.datastax.qa.dtest.sample.class
+                                                                                                                     
+
+

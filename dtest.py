@@ -7,6 +7,8 @@ from ccmlib.node import Node
 from nose.exc import SkipTest
 from unittest import TestCase
 
+from config_loader import ConfigLoader
+
 logging.basicConfig(stream=sys.stderr)
 
 LOG_SAVED_DIR="logs"
@@ -37,6 +39,9 @@ def debug(msg):
 class Tester(TestCase):
 
     def __init__(self, *argv, **kwargs):
+        # specify initialial log level per class map 
+        self.per_test_log_class_map = None;
+
         # if False, then scan the log of each node for errors after every test.
         self.allow_log_errors = False
         try:
@@ -44,6 +49,32 @@ class Tester(TestCase):
             del kwargs['cluster_options']
         except KeyError:
             self.cluster_options = None
+
+        #######################################################################
+        ##
+        ## process command line configuration options, check if they are applied 
+        ## to the given test, and if so, extract test specific date
+        ##
+        #######################################################################
+
+        # using config loader
+        print '*** using config loader *** '
+        config_loader = ConfigLoader()
+        config_loader.enableDebug()
+        full_log_class_map = config_loader.load_config_dist()
+
+        # check if given config includes information of given tests
+        current_test_name = type(self).__name__
+        print '*** current_test_name =  ' + str(current_test_name) + ' ***'
+        
+        # and if so, setup cluster with per_test_log_class_map and if does not
+        # exist, check if default configuration is available
+        # skip otherwise
+        if full_log_class_map.has_key( current_test_name ):
+            self.per_test_log_class_map = full_log_class_map[current_test_name];
+        elif full_log_class_map.has_key( 'default' ):
+            self.per_test_log_class_map = full_log_class_map['default']
+
         super(Tester, self).__init__(*argv, **kwargs)
 
 
@@ -97,6 +128,7 @@ class Tester(TestCase):
 
         self.cluster = self.__get_cluster()
         self.__setup_cobertura()
+
         # the failure detector can be quite slow in such tests with quick start/stop
         self.cluster.set_configuration_options(values={'phi_convict_threshold': 5})
 
@@ -117,8 +149,19 @@ class Tester(TestCase):
         with open(LAST_TEST_DIR, 'w') as f:
             f.write(self.test_path + '\n')
             f.write(self.cluster.name)
-        if DEBUG:
-            self.cluster.set_log_level("DEBUG")
+        root_logger_level = self.per_test_log_class_map['rootLogger']
+
+        #
+        # if rootLogger is specify on per test level, we need to set it here
+        # otherwise, we set it based of DEBUG
+        # the rest of the class_name => log_level will be set the test after cluster.populate(num)
+        #
+        if None == root_logger_level:
+           self.cluster.set_log_level(root_logger_level)
+        else:
+            if DEBUG:
+                self.cluster.set_log_level("DEBUG")
+
         self.connections = []
         self.runners = []
 
@@ -264,7 +307,6 @@ class Tester(TestCase):
                     cobertura_jar=cobertura_jar))
             f.write('JVM_OPTS="$JVM_OPTS -Dnet.sourceforge.cobertura.datafile='
                     '$CASSANDRA_HOME/build/cobertura/cassandra-dtest/cobertura.ser"\n')
-
 
 class Runner(threading.Thread):
     def __init__(self, func):
