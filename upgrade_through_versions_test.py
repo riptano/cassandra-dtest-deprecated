@@ -39,12 +39,22 @@ class TestUpgradeThroughVersions(Tester):
 
         # Create a ring
         debug('Creating cluster (%s)' % versions[0])
+        print 'INFO: TestUpgradeThroughVersions,  cluster.populate(3)'
         cluster.populate(3)
-        print 'INFO: TestUpgradeThroughVersions,  cluster.start()'
+        
+        #
+        # setup set_log_level() for each class_name => log_level map entry
+        # except of the rootLogger that was set in setUp() of dtest.py
+        #
+        print 'setup set_log_level() for each class_name => log_level map entry'
+        if None != self.per_test_log_class_map:
+            for class_name in self.per_test_log_class_map.keys():
+                if 'rootLogger' != class_name:
+                    log_level = self.per_test_log_class_map[class_name]
+                    cluster.set_log_level(log_level, class_name)
+       
         cluster.start()
-        print 'INFO: TestUpgradeThroughVersions, cluster.nodelist()' 
         node1, node2, node3 = cluster.nodelist()
-        print 'INFO: TestUpgradeThroughVersions, nodes: ' + node1.name + ', ' + node2.name + ', ' + node3.name
         self.node2 = node2
 
         node1.watch_log_for('Listening for thrift clients...')
@@ -53,10 +63,6 @@ class TestUpgradeThroughVersions(Tester):
         conn.create_cf()
         time.sleep(.5)
         self._write_values()
-
-        ## print 'INFO: sleeping for 90 seconds .... check logs ...'
-        ## time.sleep(2) ## 90)
-        ## print 'INFO: done sleeping ...'
 
         # upgrade through versions
         for version in versions[1:]:

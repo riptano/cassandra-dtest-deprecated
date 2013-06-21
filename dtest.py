@@ -1,7 +1,6 @@
 from __future__ import with_statement
 import os, tempfile, sys, shutil, types, time, threading, ConfigParser, logging
 import fnmatch
-## import config
 
 from ccmlib.cluster import Cluster
 from ccmlib.node import Node
@@ -71,7 +70,8 @@ class Tester(TestCase):
         # and if so, setup cluster with per_test_log_class_map
         if full_log_class_map.has_key( current_test_name ):
             self.per_test_log_class_map = full_log_class_map[current_test_name];
-
+        for class_name in self.per_test_log_class_map.keys():
+            log_level = self.per_test_log_class_map[class_name]
         super(Tester, self).__init__(*argv, **kwargs)
 
 
@@ -124,32 +124,8 @@ class Tester(TestCase):
                     pass
 
         self.cluster = self.__get_cluster()
-
-        ##
-        ## using config loader
-        ## 
-        # print '*** using config loader *** '
-        # config_loader = ConfigLoader() 
-        # config_loader.enableDebug() 
-        # full_log_class_map = config_loader.load_config_dist()
-
-        ##
-        ## check if given config includes information of given tests
-        ##
-        # current_test_name = type(self).__name__
-        # print '*** current_test_name =  ' + str(current_test_name) + ' ***'
-        # per_test_log_class_map = None;
-        # if full_log_class_map.has_key( current_test_name ): 
-        #     per_test_log_class_map = full_log_class_map[current_test_name];
-            
-
-        ##
-        ## setup clustre with per_test_log_class_map 
-        ##
-        # if None != per_test_log_class_map:
-        #     self.cluster.set_log_level_per_class_map(per_test_log_class_map)
-
         self.__setup_cobertura()
+
         # the failure detector can be quite slow in such tests with quick start/stop
         self.cluster.set_configuration_options(values={'phi_convict_threshold': 5})
 
@@ -170,16 +146,18 @@ class Tester(TestCase):
         with open(LAST_TEST_DIR, 'w') as f:
             f.write(self.test_path + '\n')
             f.write(self.cluster.name)
-        if DEBUG:
-            self.cluster.set_log_level("DEBUG")
+        root_logger_level = self.per_test_log_class_map['rootLogger']
 
-        ###########################################################################################
-        ##
-        ## commented until integration to CCM is completed
-        ## self.cluster.set_log_level_to_class_map (self.per_test_log_class_map)
-        print 'Stab methond: setUp() self.cluster.set_log_level_to_class_map (self.per_test_log_class_map)'
-        ##
-        ###########################################################################################
+        #
+        # if rootLogger is specify on per test level, we need to set it here
+        # otherwise, we set it based of DEBUG
+        # the rest of the class_name => log_level will be set the test after cluster.populate(num)
+        #
+        if None == root_logger_level:
+           self.cluster.set_log_level(root_logger_level)
+        else:
+            if DEBUG:
+                self.cluster.set_log_level("DEBUG")
 
         self.connections = []
         self.runners = []
@@ -326,54 +304,6 @@ class Tester(TestCase):
                     cobertura_jar=cobertura_jar))
             f.write('JVM_OPTS="$JVM_OPTS -Dnet.sourceforge.cobertura.datafile='
                     '$CASSANDRA_HOME/build/cobertura/cassandra-dtest/cobertura.ser"\n')
-
-    #
-    # load command line arguments in format of 
-    # --tc=dtest.logger.level:ERROR --tc=dtest.logger.class_name:com.datastax.bla
-    #
-    def __parse_args(self):
-
-        log_level  = None
-        class_name = None
-
-        from testconfig import config
-
-        # process dtest
-        if config.has_key('dtest'):
-            dtest_config = config['dtest']
-            # process dtest.logger
-
-            if dtest_config.has_key('logger'):
-                dtest_logger_config = dtest_config['logger']
-
-                # process dtest.logger.level
-                if dtest_logger_config.has_key('level'):
-                    log_level  = config['dtest']['logger']['level']
-
-                # process dtest.logger.class_name
-                if dtest_logger_config.has_key('class_name'):
-                    class_name = config['dtest']['logger']['class_name']
-
-        # Error handling
-        if log_level != None and class_name != None:
-            print 'Opt: log_level  (dtest.logger.level)     : ' + str(log_level)
-            print 'Opt: class_name (dtest.logger.class_name): ' + str(class_name)
-            return (log_level, class_name)
-
-        else:
-            print >> sys.stderr, self.__usage()
-            exit(1)
-
-    # 
-    # usage function for __parse_args()
-    #
-    def __usage(self):
-        print 'Usage: '
-        print 'Nothing to setup - will use default rootLogger (INFO)'
-        print 'Setup rootLogger into <level>    : --tc=dtest.logger.level:<level>'
-        print 'Setup logger <level> for <class> : --tc=dtest.logger.level:<level> --tc=dtest.logger.class_name:<class>'
-
-
 
 class Runner(threading.Thread):
     def __init__(self, func):
