@@ -67,11 +67,14 @@ class Tester(TestCase):
         current_test_name = type(self).__name__
         print '*** current_test_name =  ' + str(current_test_name) + ' ***'
         
-        # and if so, setup cluster with per_test_log_class_map
+        # and if so, setup cluster with per_test_log_class_map and if does not
+        # exist, check if default configuration is available
+        # skip otherwise
         if full_log_class_map.has_key( current_test_name ):
             self.per_test_log_class_map = full_log_class_map[current_test_name];
-        for class_name in self.per_test_log_class_map.keys():
-            log_level = self.per_test_log_class_map[class_name]
+        elif full_log_class_map.has_key( 'default' ):
+            self.per_test_log_class_map = full_log_class_map['default']
+
         super(Tester, self).__init__(*argv, **kwargs)
 
 
