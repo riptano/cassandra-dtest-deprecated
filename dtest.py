@@ -50,31 +50,11 @@ class Tester(TestCase):
         except KeyError:
             self.cluster_options = None
 
-        #######################################################################
-        ##
-        ## process command line configuration options, check if they are applied 
-        ## to the given test, and if so, extract test specific date
-        ##
-        #######################################################################
-
-        # using config loader
-        print '*** using config loader *** '
-        config_loader = ConfigLoader()
-        config_loader.enableDebug()
-        full_log_class_map = config_loader.load_config_dist()
-
-        # check if given config includes information of given tests
+        # define the test case name and pass it into class derived from class Cluster
         current_test_name = type(self).__name__
-        print '*** current_test_name =  ' + str(current_test_name) + ' ***'
+        self.current_test_name = current_test_name
+        debug('Tester::__init__(): self.current_test_name = ' + str(self.current_test_name))
         
-        # and if so, setup cluster with per_test_log_class_map and if does not
-        # exist, check if default configuration is available
-        # skip otherwise
-        if full_log_class_map.has_key( current_test_name ):
-            self.per_test_log_class_map = full_log_class_map[current_test_name];
-        elif full_log_class_map.has_key( 'default' ):
-            self.per_test_log_class_map = full_log_class_map['default']
-
         super(Tester, self).__init__(*argv, **kwargs)
 
 
@@ -83,15 +63,17 @@ class Tester(TestCase):
         debug("cluster ccm directory: "+self.test_path)
         try:
             version = os.environ['CASSANDRA_VERSION']
-            cluster = Cluster(self.test_path, name, cassandra_version=version)
+            cluster = DtestCluster(self.test_path, name, cassandra_version=version)
         except KeyError:
             try:
                 cdir = os.environ['CASSANDRA_DIR']
             except KeyError:
                 cdir = DEFAULT_DIR
-            cluster = Cluster(self.test_path, name, cassandra_dir=cdir)
+            cluster = DtestCluster(self.test_path, name, cassandra_dir=cdir)
         if ENABLE_VNODES and cluster.version() >= "1.2":
             cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': 256})
+        debug('Tester::__get_cluster(): self.per_test_log_class_map = ' + str(self.per_test_log_class_map))
+        cluster.set_test_case_name (self.current_test_name)
         return cluster
 
     def __cleanup_cluster(self):
@@ -149,18 +131,8 @@ class Tester(TestCase):
         with open(LAST_TEST_DIR, 'w') as f:
             f.write(self.test_path + '\n')
             f.write(self.cluster.name)
-        root_logger_level = self.per_test_log_class_map['rootLogger']
-
-        #
-        # if rootLogger is specify on per test level, we need to set it here
-        # otherwise, we set it based of DEBUG
-        # the rest of the class_name => log_level will be set the test after cluster.populate(num)
-        #
-        if None == root_logger_level:
-           self.cluster.set_log_level(root_logger_level)
-        else:
-            if DEBUG:
-                self.cluster.set_log_level("DEBUG")
+        if DEBUG:
+            self.cluster.set_log_level("DEBUG")
 
         self.connections = []
         self.runners = []
@@ -337,3 +309,71 @@ class Runner(threading.Thread):
     def check(self):
         if self.__error is not None:
             raise self.__error
+
+
+#########################################################################################
+# 
+# Class derived from ccm's Cluster mostly because, we need to re-define populate() method. 
+# It should implement original cluster.populate() plus perform setting log_level for the 
+# given map of class_name => log_level
+# 
+#########################################################################################
+class DtestCluster(Cluster):
+    def __init__(self, *argv, **kwargs):
+        Cluster.__init__(self, *argv, **kwargs)
+
+    def populate(self, nodes, debug=False, tokens=None, use_vnodes=False, ipprefix='127.0.0.'):
+        # Calling Cluster.populate() and set log level stuff here..
+        Cluster.populate(self, nodes, debug, tokens, use_vnodes, ipprefix)
+
+        # check if given config includes information of given tests and return log/class map
+        per_test_log_class_map = self.get_per_test_log_class_map()
+
+        #
+        # process the map and setup set_log_level() for each class_name => log_level 
+        # on map entry pay extra attention on the rootLogger
+        #
+        if None != per_test_log_class_map:
+            for class_name in per_test_log_class_map.keys():
+                log_level = per_test_log_class_map[class_name]
+                if None != log_level:
+                    if 'rootLogger' == class_name:
+                        class_name = None;
+                    Cluster.set_log_level(self, log_level, class_name)
+
+
+    def set_test_case_name (self, current_test_name):
+        self.current_test_name = current_test_name
+
+    def get_per_test_log_class_map (self):
+
+        #
+        # process command line configuration options, check if they are applied
+        # to the given test, and if so, extract test specific date
+        #
+
+        config_loader = ConfigLoader()
+        ## config_loader.enableDebug()
+        full_log_class_map = config_loader.load_config_dist()
+        debug('DtestCluster: map: ' + str(full_log_class_map))
+
+        # special processing of the case if self.current_test_name is None
+        per_test_log_class_map = None
+
+        if None == self.current_test_name:
+            if full_log_class_map.has_key( 'default' ):
+                per_test_log_class_map = full_log_class_map['default']
+        else:
+            #
+            # check if given config includes information of given tests
+            # and if so, setup cluster with per_test_log_class_map and if does not
+            # exist, check if default configuration is available skip otherwise
+            #
+            if full_log_class_map.has_key( self.current_test_name ):
+                per_test_log_class_map = full_log_class_map[self.current_test_name];
+            elif full_log_class_map.has_key( 'default' ):
+                per_test_log_class_map = full_log_class_map['default']
+
+        return per_test_log_class_map 
+
+

@@ -1,3 +1,20 @@
+import sys, os, logging
+
+logging.basicConfig(stream=sys.stderr)
+
+
+DEBUG = os.environ.get('DEBUG', '').lower() in ('yes', 'true')
+PRINT_DEBUG = os.environ.get('PRINT_DEBUG', '').lower() in ('yes', 'true')
+
+LOG = logging.getLogger()
+
+def debug(msg):
+    if DEBUG:
+        LOG.debug(msg)
+    if PRINT_DEBUG:
+        print msg
+
+
 class ConfigLoader:
 
     # 
@@ -5,6 +22,7 @@ class ConfigLoader:
     #
     def __init__(self, DEBUG=False):
         self.__DEBUG = DEBUG
+        debug('Privet debug')
 
     def enableDebug(self):
         self.__DEBUG = True
@@ -21,11 +39,10 @@ class ConfigLoader:
 
         from testconfig import config
 
-        if self.__DEBUG:
-            print 'load_config_dist() :: load original config dictionary BEFORE modifying it'
-            self.__print_conf_dist(config)
+        debug('load_config_dist() :: load original config dictionary BEFORE modifying it')
+        self.__print_conf_dist(config)
+        debug('\n########################################################\n')
 
-        print '\n########################################################\n' if self.__DEBUG else None
         log_class = None
         log_level = None
         tests_list = None
@@ -55,29 +72,26 @@ class ConfigLoader:
 
             # Iterate given config over the list of the tests specified in dtest.tests_to_log
             for config_test_case_key in config.keys():
-                print 'config_test_case_key => ' + config_test_case_key if self.__DEBUG else None 
+                debug('config_test_case_key => ' + config_test_case_key)
                 found_test_case = False
                 for arg_test_case in tests_list:
-                    print '\targ_test_case => ' + arg_test_case if self.__DEBUG else None
+                    debug('\targ_test_case => ' + arg_test_case)
                     arg_test_case = arg_test_case.strip()
                     if config_test_case_key == arg_test_case:
                         found_test_case = True
                         if (log_class != None and log_level != None):
-                            if self.__DEBUG:
-                                print 'Processing ' + config_test_case_key + ' and setting [' + log_class + '] = ' + log_level
+                            debug('Processing ' + config_test_case_key + ' and setting [' + log_class + '] = ' + log_level)
                             config[config_test_case_key][log_class] = log_level
                 if False == found_test_case:
                     del config[config_test_case_key]
-                    print '\t\tdeleting: ' + config_test_case_key if self.__DEBUG else None
+                    debug('\t\tdeleting: ' + config_test_case_key)
         
         else:
-            print 'Do nothing. No command line arguments passed. Do standard nose execution' if self.__DEBUG else None
+            debug('Do nothing. No command line arguments passed. Do standard nose execution')
             self.__usage() 
 
-
-        if self.__DEBUG:
-            print 'load_config_dist() :: load original config dictionary AFTER modifying it'
-            self.__print_conf_dist(config)
+        debug('load_config_dist() :: load original config dictionary AFTER modifying it')
+        self.__print_conf_dist(config)
 
         return config
 
@@ -86,7 +100,7 @@ class ConfigLoader:
     # Print the content of config dictionary
     #
     def __print_conf_dist(self, dict):
-        if self.__DEBUG:
+        if DEBUG or self.__DEBUG:
             print '#################################################################'
             print '######################### MAP ###################################'
             for cases_key in dict.keys():
@@ -95,7 +109,6 @@ class ConfigLoader:
                 for entry_key in test_case_dist.keys():
                     print '\t' + entry_key + ' => ' + test_case_dist[entry_key]
             print '#################################################################'
-
 
     def __usage(self):
         print '                                                                                                                     '

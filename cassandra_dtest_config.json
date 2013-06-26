@@ -1,24 +1,12 @@
 {
     "default": {
-        "rootLogger":     "INFO",
-        "com.rootLogger": "TRACE"
+        "rootLogger":     "INFO"
     },
 
-    "test_delete": {
-        "rootLogger": "DEBUG",
-        "org.apache.cassandra.cql": "INFO",
-        "org.apache.cassandra.db.ReadRepairVerbHandler": "DEBUG"
-    },
-
-    "test_update": {
-        "org.apache.cassandra.cql": "TRACE",
-        "org.apache.cassandra.db.ReadRepairVerbHandler": "ERROR"
-    },
-  
-    "ConfigTest": {
-        "rootLogger": "INFO",
-        "org.apache.cassandra.cql": "TRACE",
-        "org.apache.cassandra.db.ReadRepairVerbHandler": "ERROR"
+    "TestUpgradeThroughVersions": {
+        "rootLogger": "TRACE",
+        "org.apache.cassandra.io.sstable.SSTableReader": "DEBUG",
+        "org.apache.cassandra.io.sstable": "INFO"
     }
 }
 
