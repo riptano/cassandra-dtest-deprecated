@@ -1,0 +1,19 @@
+{
+    "default": {
+        "rootLogger": "ERROR",
+        "org.apache.cassandra.service.CassandraDaemon": "INFO",
+        "org.apache.cassandra.thrift.ThriftServer": "INFO",
+        "org.apache.cassandra.transport.Server": "INFO"
+    },
+
+    "TestWideRows": {
+        "rootLogger": "INFO",
+        "org.apache.cassandra.utils.SlabAllocator": "TRACE"
+    },
+
+    "TestCounters": {
+        "rootLogger": "ERROR",
+        "org.apache.cassandra.db.ColumnFamilyStore": "INFO",
+        "org.apache.cassandra.db.compaction.CompactionTask": "INFO"
+    }
+}

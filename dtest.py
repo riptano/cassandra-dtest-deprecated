@@ -313,11 +313,12 @@ class Runner(threading.Thread):
 
 #########################################################################################
 # 
-# Class derived from ccm's Cluster mostly because, we need to re-define populate() method. 
+# Class derived from ccm's Cluster, since we need to re-define populate() method. 
 # It should implement original cluster.populate() plus perform setting log_level for the 
 # given map of class_name => log_level
 # 
 #########################################################################################
+
 class DtestCluster(Cluster):
     def __init__(self, *argv, **kwargs):
         Cluster.__init__(self, *argv, **kwargs)
