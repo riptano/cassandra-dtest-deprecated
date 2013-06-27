@@ -341,6 +341,7 @@ class DtestCluster(Cluster):
                     if 'rootLogger' == class_name:
                         class_name = None;
                     Cluster.set_log_level(self, log_level, class_name)
+        return self
 
 
     def set_test_case_name (self, current_test_name):
@@ -366,15 +367,26 @@ class DtestCluster(Cluster):
                 per_test_log_class_map = full_log_class_map['default']
         else:
             #
-            # check if given config includes information of given tests
-            # and if so, setup cluster with per_test_log_class_map and if does not
-            # exist, check if default configuration is available skip otherwise
+            # we should return the part of the config map applied to the default section
+            # unless some of class(es)/log level(s) are overriden (or just added)
+            # in that given test name section
             #
+            temp_per_test_log_class_map = {}
+            per_test_entry_found = 0
+            if full_log_class_map.has_key( 'default' ):
+                given_test_log_class_map = full_log_class_map['default']
+                for class_name in given_test_log_class_map.keys():
+                    temp_per_test_log_class_map[class_name] = given_test_log_class_map[class_name]
+                per_test_entry_found += 1
+
             if full_log_class_map.has_key( self.current_test_name ):
-                per_test_log_class_map = full_log_class_map[self.current_test_name];
-            elif full_log_class_map.has_key( 'default' ):
-                per_test_log_class_map = full_log_class_map['default']
+                given_test_log_class_map = full_log_class_map[self.current_test_name]
+                for class_name in given_test_log_class_map.keys():
+                    temp_per_test_log_class_map[class_name] = given_test_log_class_map[class_name]
+                per_test_entry_found += 1
 
-        return per_test_log_class_map 
+            if 0 < per_test_entry_found:
+                per_test_log_class_map = temp_per_test_log_class_map
 
+            return per_test_log_class_map
 
