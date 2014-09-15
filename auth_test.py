@@ -477,40 +477,40 @@ class TestAuth(Tester):
         cassandra.execute("GRANT MODIFY ON ks.cf2 TO bob")
         cassandra.execute("GRANT SELECT ON ks.cf2 TO cathy")
 
-        self.assertPermissionsListed([('cathy', '<all keyspaces>', 'CREATE'),
-                                      ('cathy', '<table ks.cf>', 'MODIFY'),
-                                      ('cathy', '<table ks.cf2>', 'SELECT'),
-                                      ('bob', '<keyspace ks>', 'ALTER'),
-                                      ('bob', '<table ks.cf>', 'DROP'),
-                                      ('bob', '<table ks.cf2>', 'MODIFY')],
+        self.assertPermissionsListed([('cathy', 'None', '<all keyspaces>', 'CREATE'),
+                                      ('cathy', 'None', '<table ks.cf>', 'MODIFY'),
+                                      ('cathy', 'None', '<table ks.cf2>', 'SELECT'),
+                                      ('bob', 'None', '<keyspace ks>', 'ALTER'),
+                                      ('bob', 'None', '<table ks.cf>', 'DROP'),
+                                      ('bob', 'None', '<table ks.cf2>', 'MODIFY')],
                                      cassandra, "LIST ALL PERMISSIONS")
 
-        self.assertPermissionsListed([('cathy', '<all keyspaces>', 'CREATE'),
-                                      ('cathy', '<table ks.cf>', 'MODIFY'),
-                                      ('cathy', '<table ks.cf2>', 'SELECT')],
+        self.assertPermissionsListed([('cathy', 'None', '<all keyspaces>', 'CREATE'),
+                                      ('cathy', 'None', '<table ks.cf>', 'MODIFY'),
+                                      ('cathy', 'None', '<table ks.cf2>', 'SELECT')],
                                      cassandra, "LIST ALL PERMISSIONS OF cathy")
 
-        self.assertPermissionsListed([('cathy', '<table ks.cf>', 'MODIFY'),
-                                      ('bob', '<table ks.cf>', 'DROP')],
+        self.assertPermissionsListed([('cathy', 'None', '<table ks.cf>', 'MODIFY'),
+                                      ('bob', 'None', '<table ks.cf>', 'DROP')],
                                      cassandra, "LIST ALL PERMISSIONS ON ks.cf NORECURSIVE")
 
-        self.assertPermissionsListed([('cathy', '<table ks.cf2>', 'SELECT')],
+        self.assertPermissionsListed([('cathy', 'None', '<table ks.cf2>', 'SELECT')],
                                       cassandra, "LIST SELECT ON ks.cf2")
 
-        self.assertPermissionsListed([('cathy', '<all keyspaces>', 'CREATE'),
-                                      ('cathy', '<table ks.cf>', 'MODIFY')],
+        self.assertPermissionsListed([('cathy', 'None', '<all keyspaces>', 'CREATE'),
+                                      ('cathy', 'None', '<table ks.cf>', 'MODIFY')],
                                      cassandra, "LIST ALL ON ks.cf OF cathy")
 
         bob = self.get_cursor(user='bob', password='12345')
-        self.assertPermissionsListed([('bob', '<keyspace ks>', 'ALTER'),
-                                      ('bob', '<table ks.cf>', 'DROP'),
-                                      ('bob', '<table ks.cf2>', 'MODIFY')],
+        self.assertPermissionsListed([('bob', 'None', '<keyspace ks>', 'ALTER'),
+                                      ('bob', 'None', '<table ks.cf>', 'DROP'),
+                                      ('bob', 'None', '<table ks.cf2>', 'MODIFY')],
                                      bob, "LIST ALL PERMISSIONS OF bob")
 
-        self.assertUnauthorized("You are not authorized to view everyone's permissions",
+        self.assertUnauthorized("You are not authorized to view all roles and users permissions",
                                 bob, "LIST ALL PERMISSIONS")
 
-        self.assertUnauthorized("You are not authorized to view cathy's permissions",
+        self.assertUnauthorized("You are not authorized to view User-cathy permissions",
                                 bob, "LIST ALL PERMISSIONS OF cathy")
 
     def prepare(self, nodes=1, permissions_expiry=0):
@@ -518,7 +518,7 @@ class TestAuth(Tester):
                   'authorizer' : 'org.apache.cassandra.auth.CassandraAuthorizer',
                   'permissions_validity_in_ms' : permissions_expiry}
         self.cluster.set_configuration_options(values=config)
-        self.cluster.populate(nodes).start()
+        self.cluster.populate(nodes).start(no_wait=True)
         # default user setup is delayed by 10 seconds to reduce log spam
         if nodes == 1:
             self.cluster.nodelist()[0].watch_log_for('Created default superuser')
@@ -534,7 +534,7 @@ class TestAuth(Tester):
 
     def assertPermissionsListed(self, expected, cursor, query):
         cursor.execute(query)
-        perms = [(str(r[0]), str(r[1]), str(r[2])) for r in cursor.fetchall()]
+        perms = [(str(r[0]), str(r[1]), str(r[2]), str(r[3])) for r in cursor.fetchall()]
         self.assertEqual(sorted(expected), sorted(perms))
 
     def assertUnauthorized(self, message, cursor, query):
