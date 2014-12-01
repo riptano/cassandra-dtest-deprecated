@@ -3,8 +3,8 @@ import time
 import uuid
 import re
 from dtest import Tester, debug
-from pytools import since
-from pyassertions import assert_invalid
+from pytools import since, require
+from pyassertions import assert_invalid, assert_one
 from cassandra import Unauthorized
 
 
@@ -708,3 +708,33 @@ class TestUserTypes(Tester):
         for _id in ids:
             res = cursor.execute("SELECT letterpair FROM letters where id = {}".format(_id))
             self.assertEqual(decode(res), [[[u'a', u'z'], [u'c', u'a'], [u'c', u'f'], [u'c', u'z'], [u'd', u'e'], [u'z', u'a']]])
+
+    @since('3.0')
+    @require('7826')
+    def test_nested_collections_in_user_types(self):
+        cluster = self.cluster
+        cluster.populate(3).start()
+        node1, node2, node3 = cluster.nodelist()
+        cursor = self.patient_cql_connection(node1)
+        self.create_ks(cursor, 'user_types', 2)
+
+        stmt = """
+              CREATE TYPE parent (
+                name text,
+                child_hobbies map<text, set<text>>
+                )
+            """
+        cursor.execute(stmt)
+
+        stmt = """
+              CREATE TABLE parent_list (
+                id int PRIMARY KEY,
+                p parent
+                )
+            """
+        cursor.execute(stmt)
+
+        cursor.execute("INSERT INTO parent_list (id, p) VALUES \
+            (0, {name:'John', child_hobbies:{'JJ':{'chess', 'hockey'}, 'Sally':{'BASIC', 'Astronomy'}}})")
+
+        assert_one(cursor, "SELECT p FROM parent_list WHERE id=0", ['John', {'JJ':['chess','hockey'], 'Sally':['BASIC','Astronomy']}])

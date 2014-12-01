@@ -1,7 +1,7 @@
 import random, re, time, uuid
 
 from dtest import Tester, debug
-from pytools import since
+from pytools import since, require
 from pyassertions import assert_invalid
 from cassandra import InvalidRequest
 from cassandra.query import BatchStatement, SimpleStatement
@@ -590,3 +590,100 @@ class TestSecondaryIndexesOnCollections(Tester):
 
             self.assertTrue(shared_uuid in db_uuids)
             self.assertTrue(log_entry['unshared_uuid2'] in db_uuids.values())
+
+    @since('3.0')
+    @require('7826')
+    def test_nested_list_collections(self):
+        """
+        Checks that secondary indexes on nested lists work for querying.
+        """
+        cluster = self.cluster
+        cluster.populate(1).start()
+        [node1] = cluster.nodelist()
+        cursor = self.patient_cql_connection(node1)
+        self.create_ks(cursor, 'list_index_search', 1)
+
+        stmt = ("CREATE TABLE list_index_search.users ("
+               "user_id uuid PRIMARY KEY,"
+               "email text,"
+               "uuids list<list<uuid>>"
+              ")")
+        cursor.execute(stmt)
+
+        # no index present yet, make sure there's an error trying to query column
+        stmt = ("SELECT * from list_index_search.users where uuids contains [{some_uuid}]"
+            ).format(some_uuid=uuid.uuid4())
+        assert_invalid(cursor, stmt, 'No secondary indexes on the restricted columns support the provided operators')
+
+        # add index and query again (even though there are no rows in the table yet)
+        stmt = "CREATE INDEX user_uuids on list_index_search.users (uuids);"
+        cursor.execute(stmt)
+
+        stmt = ("SELECT * from list_index_search.users where uuids contains [{some_uuid}]").format(some_uuid=uuid.uuid4())
+        row = cursor.execute(stmt)
+        self.assertEqual(0, len(row))
+
+        # add a row which doesn't specify data for the indexed column, and query again
+        user1_uuid = uuid.uuid4()
+        stmt = ("INSERT INTO list_index_search.users (user_id, email)"
+              "values ({user_id}, 'test@example.com')"
+            ).format(user_id=user1_uuid)
+        cursor.execute(stmt)
+
+        stmt = ("SELECT * from list_index_search.users where uuids contains [{some_uuid}]").format(some_uuid=uuid.uuid4())
+        row = cursor.execute(stmt)
+        self.assertEqual(0, len(row))
+
+        _id = uuid.uuid4()
+        # alter the row to add a single item to the indexed list
+        stmt = ("UPDATE list_index_search.users set uuids = [[{id}]] where user_id = {user_id}"
+            ).format(id=_id, user_id=user1_uuid)
+        cursor.execute(stmt)
+
+        stmt = ("SELECT * from list_index_search.users where uuids contains [{some_uuid}]").format(some_uuid=_id)
+        row = cursor.execute(stmt)
+        self.assertEqual(1, len(row))
+
+        # add a bunch of user records and query them back
+        shared_uuid = uuid.uuid4() # this uuid will be on all records
+
+        log = []
+
+        for i in range(50000):
+            user_uuid = uuid.uuid4()
+            unshared_uuid = uuid.uuid4()
+
+            # give each record a unique email address using the int index
+            stmt = ("INSERT INTO list_index_search.users (user_id, email, uuids)"
+                  "values ({user_uuid}, '{prefix}@example.com', [[{s_uuid}, {u_uuid}]])"
+               ).format(user_uuid=user_uuid, prefix=i, s_uuid=shared_uuid, u_uuid=unshared_uuid)
+            cursor.execute(stmt)
+
+            log.append(
+                {'user_id': user_uuid,
+                 'email':str(i)+'@example.com',
+                 'unshared_uuid':unshared_uuid}
+            )
+
+        # confirm there is now 50k rows with the 'shared' uuid above in the secondary index
+        stmt = ("SELECT * from list_index_search.users where uuids contains [{shared_uuid}]").format(shared_uuid=shared_uuid)
+        rows = cursor.execute(stmt)
+        result = [row for row in rows]
+        self.assertEqual(50000, len(result))
+
+        # shuffle the log in-place, and double-check a slice of records by querying the secondary index
+        random.shuffle(log)
+
+        for log_entry in log[:1000]:
+            stmt = ("SELECT user_id, email, uuids FROM list_index_search.users where uuids contains [{unshared_uuid}]"
+                ).format(unshared_uuid=log_entry['unshared_uuid'])
+            rows = cursor.execute(stmt)
+
+            self.assertEqual(1, len(rows))
+
+            db_user_id, db_email, db_uuids = rows[0]
+
+            self.assertEqual(db_user_id, log_entry['user_id'])
+            self.assertEqual(db_email, log_entry['email'])
+            self.assertEqual(str(db_uuids[0]), str(shared_uuid))
+            self.assertEqual(str(db_uuids[1]), str(log_entry['unshared_uuid']))

@@ -4946,3 +4946,41 @@ class TestCQL(Tester):
         assert_invalid(cursor, "SELECT v[2..0] FROM test")
 
         assert_all(cursor, "SELECT sizeof(v) FROM test", [[4], [4]])
+
+    @since('3.0')
+    @require('7826')
+    def nested_collections_select_test(self):
+        cursor = self.prepare()
+
+        cursor.execute("CREATE TABLE maps (k int PRIMARY KEY, v map<int, map<int, map<int, int>>)")
+        cursor.execute("INSERT INTO maps (k ,v) VALUES (0, {0:{2:{4:5}}, 1:{3:{6:7}}})")
+
+        assert_one(cursor, "SELECT v[0] FROM maps WHERE k = 0", [{2:{4:5}}])
+        assert_one(cursor, "SELECT v[1][3] FROM maps WHERE k = 0", [{6:7}])
+        assert_one(cursor, "SELECT v[0][2][4] FROM maps WHERE k = 0", [5])
+        assert_none(cursor, "SELECT v[1][0] FROM maps WHERE k = 0")
+
+        cursor.execute("CREATE TABLE lists (k int PRIMARY KEY, v list<list<list<int>>>)")
+        cursor.execute("INSERT INTO lists (k, v) VALUES (0, [[[1,2,3], [4,5,6]], [[0,2,4], [7,8,9]]])")
+
+        assert_one(cursor, "SELECT v[0] FROM lists WHERE k = 0", [[[1,2,3], [4,5,6]]])
+        assert_one(cursor, "SELECT v[1][0] FROM lists WHERE k = 0", [[0,2,4]])
+        assert_one(cursor, "SELECT v[0][1][2] FROM lists WHERE k = 0", [3])
+        assert_none(cursor, "SELECT v[1][0][4] FROM lists WHERE k = 0")
+
+    @since('3.0')
+    @require('7826')
+    def nest_other_collections_select_test(self):
+        cursor = self.prepare()
+
+        cursor.execute("CREATE TABLE mapset (k int PRIMARY KEY, v map<text, set<text>>)")
+        cursor.execute("INSERT INTO mapset (k, v) VALUES (0, {'cassandra':{'database', 'software'}, 'apache':{'company', 'people'}})")
+
+        assert_one(cursor, "SELECT v['cassandra'] FROM mapset WHERE k = 0", [sortedset(['database', 'software'])])
+
+        cursor.execute("CREATE TABLE listmap (k int PRIMARY KEY, v list<map<int, int>>)")
+        cursor.execute("INSERT INTO listmap (k, v) VALUES (0, [{0:0}, {1:1}, {2:-99}])")
+
+        assert_one(cursor, "SELECT v[0] FROM listmap WHERE k = 0", [{0:0}])
+        assert_one(cursor, "SELECT v[2][2] FROM listmap WHERE k = 0", [-99])
+        assert_none(cursor, "SELECT v[2][0] FROM listmap WHERE k = 0")
