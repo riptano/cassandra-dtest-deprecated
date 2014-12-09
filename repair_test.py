@@ -2,7 +2,8 @@ import time, re
 from dtest import Tester, debug
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
-from pytools import no_vnodes, insert_c1c2, query_c1c2
+from pytools import no_vnodes, insert_c1c2, query_c1c2, since
+from nose.tools import timed
 
 class TestRepair(Tester):
 
@@ -29,11 +30,11 @@ class TestRepair(Tester):
             for node in stopped_nodes:
                 node.start(wait_other_notice=True)
 
-    def simple_repair_test(self, ):
+    def simple_repair_test(self):
         self._simple_repair()
 
     @no_vnodes()  # https://issues.apache.org/jira/browse/CASSANDRA-5220
-    def simple_repair_order_preserving_test(self, ):
+    def simple_repair_order_preserving_test(self):
         self._simple_repair(order_preserving_partitioner=True)
 
     def _simple_repair(self, order_preserving_partitioner=False):
@@ -104,3 +105,43 @@ class TestRepair(Tester):
         # Check node3 now has the key
         self.check_rows_on_node(node3, 2001, found=[1000], restart=False)
 
+    @since('2.1')
+    @timed(900)
+    def incremental_repair_test(self):
+        self._incremental_repair_test()
+
+    def _incremental_repair_test(self):
+        fail_expr = "(Did not get positive replies from all endpoints|Lost notification)"
+        pattern = re.compile(fail_expr)
+
+        def _do_repair(node):
+            start = time.time()
+            debug("starting repair on {}...".format(node.name))
+            if cluster.version() < "3.0":
+                output = node.repair(['-par', '-inc'], capture_output=True)
+            else:
+                output = node.repair(capture_output=True)
+            debug("Repair time of {}: {}".format(node.name, time.time() - start))
+            self.assertIsNone(
+                pattern.search(output[0]),
+                'Error during parallel incremental repair'
+            )
+
+        cluster = self.cluster
+
+        debug("Starting a 8 nodes cluster..")
+        debug("Set TRACE log level to slow the cluster..")
+        cluster.set_log_level('TRACE')
+        cluster.populate(8).start()
+        [node1, node2, node3, node4, node5, node6, node7, node8] = cluster.nodelist()
+
+        debug("Run stress to insert data")
+        node1.stress([
+            'write', 'n=500000',
+            '-schema', 'replication(factor=3)',
+            '-rate', 'threads=50'
+        ])
+
+        _do_repair(node1)
+        _do_repair(node4)
+        _do_repair(node6)
