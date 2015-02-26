@@ -3,6 +3,7 @@ from decorator  import decorator
 from distutils.version import LooseVersion
 import re, os, sys, fileinput, time
 
+import nose
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
@@ -163,7 +164,27 @@ class since(object):
         if self.max_version is not None:
             self.max_version = LooseVersion(self.max_version)
 
+    def _wrap_test_methods(self, cls):
+        """
+        Determines which methods on a class are test methods and wraps them
+        using this since object.
+        """
+        clsdict = cls.__dict__
+        is_test_function = nose.selector.Selector(None).wantFunction
+
+        method_names = (k for k in clsdict if callable(clsdict[k]))
+        test_methods = (k for k in method_names if
+                        is_test_function(getattr(cls, k)))
+
+        for k in test_methods:
+            setattr(cls, k, self(getattr(cls, k)))
+        return cls
+
+
     def __call__(self, f):
+        if isinstance(f, type):
+            return self._wrap_test_methods(f)
+
         def wrapped(obj):
             cluster_version = LooseVersion(obj.cluster.version())
             if cluster_version < self.cass_version:
