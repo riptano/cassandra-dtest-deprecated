@@ -262,16 +262,9 @@ class TestSecondaryIndexes(Tester):
             time.sleep(0.10)
             self.wait_for_schema_agreement(cursor)
 
+class TestIndexesOnCollections(Tester):
 
-class TestSecondaryIndexesOnCollections(Tester):
-    def __init__(self, *args, **kwargs):
-        Tester.__init__(self, *args, **kwargs)
-
-    @since('2.1')
-    def test_list_indexes(self):
-        """
-        Checks that secondary indexes on lists work for querying.
-        """
+    def list_indexes(self, global=False):
         cluster = self.cluster
         cluster.populate(1).start()
         [node1] = cluster.nodelist()
@@ -363,11 +356,7 @@ class TestSecondaryIndexesOnCollections(Tester):
             self.assertEqual(str(db_uuids[0]), str(shared_uuid))
             self.assertEqual(str(db_uuids[1]), str(log_entry['unshared_uuid']))
 
-    @since('2.1')
-    def test_set_indexes(self):
-        """
-        Checks that secondary indexes on sets work for querying.
-        """
+    def set_indexes(self, global=False):
         cluster = self.cluster
         cluster.populate(1).start()
         [node1] = cluster.nodelist()
@@ -455,11 +444,7 @@ class TestSecondaryIndexesOnCollections(Tester):
             self.assertTrue(shared_uuid in db_uuids)
             self.assertTrue(log_entry['unshared_uuid'] in db_uuids)
 
-    @since('2.1')
-    def test_map_indexes(self):
-        """
-        Checks that secondary indexes on maps work for querying on both keys and values
-        """
+    def map_indexes(self, global=False):
         cluster = self.cluster
         cluster.populate(1).start()
         [node1] = cluster.nodelist()
@@ -593,3 +578,43 @@ class TestSecondaryIndexesOnCollections(Tester):
 
             self.assertTrue(shared_uuid in db_uuids)
             self.assertTrue(log_entry['unshared_uuid2'] in db_uuids.values())
+
+class TestGlobalIndexesOnCollections(TestIndexesOnCollections):
+
+    @since('3.0')
+    def test_list_indexes(self):
+        self.list_indexes(True)
+
+    @since('3.0')
+    def test_map_indexes(self):
+        self.map_indexes(True)
+
+    @since('3.0')
+    def test_set_indexes(self):
+        self.set_indexes(True)
+
+
+class TestSecondaryIndexesOnCollections(TestIndexesOnCollections):
+    def __init__(self, *args, **kwargs):
+        Tester.__init__(self, *args, **kwargs)
+
+    @since('2.1')
+    def test_list_indexes(self):
+        """
+        Checks that secondary indexes on lists work for querying.
+        """
+        self.list_indexes()
+
+    @since('2.1')
+    def test_set_indexes(self):
+        """
+        Checks that secondary indexes on sets work for querying.
+        """
+        self.set_indexes()
+
+    @since('2.1')
+    def test_map_indexes(self):
+        """
+        Checks that secondary indexes on maps work for querying on both keys and values
+        """
+        self.map_indexes()
