@@ -402,10 +402,10 @@ class Tester(TestCase):
                     else:
                         cluster.remove()
                         os.rmdir(test_path)
-                    os.remove(LAST_TEST_DIR)
                 except IOError:
                     # after a restart, /tmp will be emptied so we'll get an IOError when loading the old cluster here
                     pass
+            os.remove(LAST_TEST_DIR)
 
     def tearDown(self):
         reset_environment_vars()
