@@ -3,6 +3,7 @@ from ccmlib.node import Node, NodeError, TimeoutError
 from cassandra import ConsistencyLevel, Unavailable, ReadTimeout
 from cassandra.query import SimpleStatement
 from tools import since
+import re
 
 class TestOfflineTools(Tester):
 
@@ -50,8 +51,21 @@ class TestOfflineTools(Tester):
         node1.flush()
         cluster.stop()
 
+        initial_levels = self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families="standard1"))
         (output, rc) = node1.run_sstablelevelreset("keyspace1", "standard1", output=True)
+        final_levels = self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families="standard1"))
 
+        for x in range(0, len(final_levels)):
+            initial = "intial level: " + str(initial_levels[x])
+            self.assertEqual(final_levels[x], 0, msg=initial)
+
+    def get_levels(self, data):
+        levels = []
+        for sstable in data:
+            (metadata, rc) = sstable
+            level = int(re.findall("SSTable Level: [0-9]", metadata)[0][-1])
+            levels.append(level)
+        return levels
 
     def sstableofflinerelevel_test(self):
     """ 
