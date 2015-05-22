@@ -1,6 +1,6 @@
 from dtest import Tester
 
-import os, sys, time
+import os, sys, time, unittest
 from ccmlib.cluster import Cluster
 from tools import require, since
 from jmxutils import make_mbean, JolokiaAgent
@@ -40,6 +40,7 @@ class TestDeletion(Tester):
         result = cursor.execute('select * from cf;')
         assert len(result) == 1 and len(result[0]) == 2, result
 
+    @unittest.skip('Jolokia connection fails')
     def tombstone_size_test(self):
         self.cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = self.cluster.nodelist()
