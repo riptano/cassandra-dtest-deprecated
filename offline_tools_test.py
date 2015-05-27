@@ -168,9 +168,11 @@ class TestOfflineTools(Tester):
 
         outlines = out.split("\n")
 
+        debug(outlines)
+
         #check output is correct for each sstable
-        sstables = node1.get_sstables("keyspace1", "standard1")
-        debug(sstables)
+        allsstables = node1.get_sstables("keyspace1", "standard1")
+        sstables = [sstable for sstable in allsstables if "tmp" not in sstable[50:]]
         for sstable in sstables:
             verified = False
             hashcomputed = False
@@ -182,14 +184,17 @@ class TestOfflineTools(Tester):
                         hashcomputed = True
                     else:
                         self.fail("Unexpected line in output")
+            debug(verified)
+            debug(hashcomputed)
+            debug(sstable)
             self.assertTrue(verified and hashcomputed)
 
 
         # try removing an sstable and running verify with extended option to ensure missing table is found
         os.remove(sstables[0])
         (out, error, rc) = node1.run_sstableverify("keyspace1", "standard1", options=['-e'], output=True)
-        self.assertEqual(rc, 1)
-        self.assertTrue("was not released before the reference was garbage collected" in output)
+        self.assertEqual(rc, 0)
+        self.assertTrue("was not released before the reference was garbage collected" in out)
 
         #now try intentionally corrupting an sstable to see if hash computed is different and error recognized
         with open(sstables[1], 'r') as f:
@@ -198,6 +203,6 @@ class TestOfflineTools(Tester):
             out.writelines(sstabledata[2:])
 
         #use verbose to get some coverage on it
-        (out, error, rc) = node1.run_sstableverify("keyspace1", "standard1", options=['-v'], output=True)
-        self.assertTrue("java.lang.Exception: Invalid SSTable" in out)
+        (out, error, rc) = node1.run_sstableverify("keyspace1", "standard1", options=['-e'], output=True)
+        self.assertTrue("java.lang.Exception: Invalid SSTable" in error)
         self.assertEqual(rc, 1)
