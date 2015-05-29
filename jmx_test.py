@@ -5,28 +5,28 @@ from cassandra.query import SimpleStatement
 from tools import since, InterruptBootstrap
 import time
 from jmxutils import make_mbean, JolokiaAgent
+from multiprocessing import Process
 
 class TestJMX(Tester):
 
     def cfhistograms_test(self):
-        """Test cfhistograms on large and small datasets to address CASSANDRA-8028"""
+        """Test cfhistograms on large and small datasets
+        @jira_ticket CASSANDRA-8028"""
 
         cluster = self.cluster
         cluster.populate(3).start()
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
         #issue large stress write to load data into cluster
-        node1.stress(['write', 'n=15000000', '-schema', 'replication(factor=3)'])
-
-        time.sleep(2)
+        node1.stress(['write', 'n=15M', '-schema', 'replication(factor=3)'])
         node1.flush()
 
         try:
             histogram = node1.nodetool("cfhistograms keyspace1 standard1", capture_output=True)
             error_msg = "Unable to compute when histogram overflowed"
+            debug(histogram)
             self.assertFalse(error_msg in histogram)
             self.assertTrue("NaN" not in histogram)
-            debug(histogram)
 
         except Exception, e:
             self.fail("Cfhistograms command failed: " + str(e))
@@ -45,20 +45,21 @@ class TestJMX(Tester):
             correct_error_msg = "No SSTables exists, unable to calculate 'Partition Size' and 'Cell Count' percentiles"
             self.assertTrue(correct_error_msg in finalhistogram[1])
         except Exception, e:
-            self.fail("Cfhistograms command failed: " + str(e))
             debug(finalhistogram)
+            self.fail("Cfhistograms command failed: " + str(e))
 
     def netstats_test(self):
-        """Check functioning of nodetool netstats, especially with restarts to address 8122"""
+        """Check functioning of nodetool netstats, especially with restarts.
+        @jira_ticket CASSANDRA-8122, CASSANDRA-6577"""
 
         cluster = self.cluster
         cluster.populate(3).start()
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
-        node1.stress(['write', 'n=5000000', '-schema', 'replication(factor=3)'])
+        node1.stress(['write', 'n=5M', '-schema', 'replication(factor=3)'])
         node1.flush()
         
-        node1.stop()
+        node1.stop(gently=False)
         try:
             node1.nodetool("netstats")
         except Exception, e:
@@ -66,7 +67,6 @@ class TestJMX(Tester):
                 self.fail("Netstats failed due to CASSANDRA-6577")
             else:
                 debug(str(e))
-        time.sleep(2)
 
         node1.start()
 
@@ -74,6 +74,7 @@ class TestJMX(Tester):
             node1.nodetool("netstats")
         except Exception, e:
             if 'java.lang.reflect.UndeclaredThrowableException' in str(e):
+                debug(str(e))
                 self.fail("Netstats failed with UndeclaredThrowableException (CASSANDRA-8122)")
             else:
                 self.fail(str(e))
@@ -83,7 +84,7 @@ class TestJMX(Tester):
         """Test some basic table metric mbeans with simple writes."""
         cluster = self.cluster
         cluster.populate(3).start()
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
         node1.stress(['write', 'n=5000', '-schema', 'replication(factor=3)'])
 
@@ -105,18 +106,26 @@ class TestJMX(Tester):
             self.assertGreaterThan(int(on_disk_size), 10000)
 
             sstables = jmx.read_attribute(sstable_count, "Value")
-            self.assertEquals(1)
+            self.assertGreaterEqual(int(sstables), 1)
 
     def repair_mbeans_test(self):
-        """Test repair specific mbeans generally work"""
+        """Test repair specific mbean generally works"""
         cluster = self.cluster
         cluster.populate(3).start()
-        [node1, node2, node3] = cluster.nodelist()
+        node1, node2, node3 = cluster.nodelist()
 
-        node1.stress(['write', 'n=5000', '-schema', 'replication(factor=3)'])
+        node1.stress(['write', 'n=50000', '-schema', 'replication(factor=3)'])
 
-        repair = make_mbean('metrics', type='ColumnFamily', keyspace='keyspace1', scope='standard1', name='RepairSessions')
+        p = Process(target=self.run_repair, args=(node1,))
+        
+        p.start()
+
+        repair = make_mbean('internal', type='AntiEntropySessions', name='ActiveCount')
 
         with JolokiaAgent(node1) as jmx:
             rep = jmx.read_attribute(repair, "Value")
-            self.assertGreaterThan(int(rep), 1)
+            self.assertGreaterEqual(int(rep), 1)
+        p.wait()
+
+    def run_repair(self, node):
+        node.repair()
