@@ -64,8 +64,6 @@ class TestOfflineTools(Tester):
         debug(final_levels)
 
         for x in range(0, len(final_levels)):
-            debug(initial_levels[x])
-            debug(final_levels[x])
             self.assertEqual(final_levels[x], 0)
 
     def get_levels(self, data):
@@ -97,14 +95,12 @@ class TestOfflineTools(Tester):
         
 
         # NOTE - As of now this does not return when it encounters Exception and causes test to hang, temporarily commented out
-
-        #test by trying to run on nonexistent keyspace
+        # test by trying to run on nonexistent keyspace
         # cluster.stop(gently=False)
         # (output, error, rc) = node1.run_sstableofflinerelevel("keyspace1", "standard1", output=True)
         # self.assertTrue("java.lang.IllegalArgumentException: Unknown keyspace/columnFamily keyspace1.standard1" in error)
         # # this should return exit code 1
         # self.assertEqual(rc, 1, msg=str(rc))
-
         #cluster.start()
 
         #now test by generating keyspace but not flushing sstables
