@@ -10,8 +10,10 @@ from multiprocessing import Process
 class TestJMX(Tester):
 
     def cfhistograms_test(self):
-        """Test cfhistograms on large and small datasets
-        @jira_ticket CASSANDRA-8028"""
+        """
+        Test cfhistograms on large and small datasets
+        @jira_ticket CASSANDRA-8028
+        """
 
         cluster = self.cluster
         cluster.populate(3).start()
@@ -49,8 +51,10 @@ class TestJMX(Tester):
             self.fail("Cfhistograms command failed: " + str(e))
 
     def netstats_test(self):
-        """Check functioning of nodetool netstats, especially with restarts.
-        @jira_ticket CASSANDRA-8122, CASSANDRA-6577"""
+        """
+        Check functioning of nodetool netstats, especially with restarts.
+        @jira_ticket CASSANDRA-8122, CASSANDRA-6577
+        """
 
         cluster = self.cluster
         cluster.populate(3).start()
@@ -81,7 +85,9 @@ class TestJMX(Tester):
 
 
     def table_metric_mbeans_test(self):
-        """Test some basic table metric mbeans with simple writes."""
+        """
+        Test some basic table metric mbeans with simple writes.
+        """
         cluster = self.cluster
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
@@ -107,25 +113,3 @@ class TestJMX(Tester):
 
             sstables = jmx.read_attribute(sstable_count, "Value")
             self.assertGreaterEqual(int(sstables), 1)
-
-    def repair_mbeans_test(self):
-        """Test repair specific mbean generally works"""
-        cluster = self.cluster
-        cluster.populate(3).start()
-        node1, node2, node3 = cluster.nodelist()
-
-        node1.stress(['write', 'n=50000', '-schema', 'replication(factor=3)'])
-
-        p = Process(target=self.run_repair, args=(node1,))
-        
-        p.start()
-
-        repair = make_mbean('internal', type='AntiEntropySessions', name='ActiveCount')
-
-        with JolokiaAgent(node1) as jmx:
-            rep = jmx.read_attribute(repair, "Value")
-            self.assertGreaterEqual(int(rep), 1)
-        p.wait()
-
-    def run_repair(self, node):
-        node.repair()
