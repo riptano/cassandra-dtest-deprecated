@@ -1136,11 +1136,15 @@ class TestAuthRoles(Tester):
         # mike *does* have execute permission on the aggregate function, as its creator
         assert_one(mike, execute_aggregate_cql, [3])
 
-    def bug_9551_test(self):
-        """ The system_auth.roles table includes a set of roles of which each role
-            is a member. If that list were to get out of sync, so that it indicated
-            that roleA is a member of roleB, but roleB does not exist in the roles
-            table, then the result of LIST ROLES OF roleA should not include roleB"""
+    def ignore_invalid_roles_test(self):
+        """
+        The system_auth.roles table includes a set of roles of which each role
+        is a member. If that list were to get out of sync, so that it indicated
+        that roleA is a member of roleB, but roleB does not exist in the roles
+        table, then the result of LIST ROLES OF roleA should not include roleB
+        @jira_ticket CASSANDRA-9551
+        """
+
         self.prepare()
         cassandra = self.get_session(user='cassandra', password='cassandra')
         cassandra.execute("CREATE ROLE mike WITH LOGIN = true")
