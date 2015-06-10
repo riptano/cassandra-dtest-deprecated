@@ -17,6 +17,10 @@ from tools import create_c1c2_table, insert_c1c2, rows_to_list, since
 
 
 class TestCqlsh(Tester):
+    """
+    Tests for a variety of cqlsh behavior.
+    """
+
     @classmethod
     def setUpClass(cls):
         cls._cached_driver_methods = monkeypatch_driver()
@@ -26,6 +30,12 @@ class TestCqlsh(Tester):
         unmonkeypatch_driver(cls._cached_driver_methods)
 
     def test_simple_insert(self):
+        """
+        Tests INSERTs through cqlsh by:
+
+        - using cqlsh to create a table and insert values into it, then
+        - using a normal session to select from the table and assert it contains the expected values.
+        """
 
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
@@ -49,6 +59,12 @@ class TestCqlsh(Tester):
                          {k : v for k,v in rows})
 
     def test_eat_glass(self):
+        """
+        Tests that cqlsh works with UTF-8 strings by using cqlsh to create
+        tables and insert non-ASCII strings into them, then selecting from
+        those tables with a normal session to assert they contain the expected
+        values.
+        """
 
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
@@ -292,7 +308,9 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
 
     def test_with_empty_values(self):
         """
-        CASSANDRA-7196. Make sure the server returns empty values and CQLSH prints them properly
+        @jira_ticket 7196
+
+        Tests that cqlsh correctly writes, reads, and displays empty values.
         """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
@@ -376,6 +394,10 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.0')
     def tracing_from_system_traces_test(self):
+        """
+        Tests that traces are printed in cqlsh after tracing is turned on, then
+        no longer printed when tracing is turned off.
+        """
         self.cluster.populate(1).start(wait_for_binary_proto=True)
 
         node1, = self.cluster.nodelist()
@@ -402,6 +424,16 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.1')
     def select_element_inside_udt_test(self):
+        """
+        @jira_ticket 7891
+
+        Tests that selecting values inside user-defined collection types works
+        from cqlsh by:
+
+        - creating UDTs, tables containing those UDTs, and inserting values into those tables via a normal connection,
+        - selecting from these tables with cqlsh, then
+        - asserting the selected values are what we expect.
+        """
         self.cluster.populate(1).start()
 
         node1, = self.cluster.nodelist()
@@ -437,6 +469,14 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         ##If this assertion fails check CASSANDRA-7891
 
     def verify_output(self, query, node, expected):
+        """
+        @param query the CQL query to be executed through cqlsh
+        @param node the node on which to call the cqlsh query
+        @param expected the expected output from cqlsh
+
+        A utility method used by test methods to execute cqlsh and compare its
+        ouput to expected values.
+        """
         output, err = node.run_cqlsh(query,
                                         cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'],
                                         return_output=True)
@@ -449,6 +489,13 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         self.assertTrue(expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected))
 
     def test_list_queries(self):
+        """
+        Tests that the user-showing commands behave correctly in cqlsh by:
+
+        - connecting to a cluster, authenticated as a superuser,
+        - creating a non-superuser user with that connection, then
+        - running LIST USERS and LIST ALL PERMISSIONS and asserting the new user is correctly shown in the output.
+        """
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
                   'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
                   'permissions_validity_in_ms': '0'}
@@ -510,6 +557,23 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 """)
 
     def test_copy_to(self):
+        """
+        Tests that COPY TO and COPY FROM work correctly.
+
+        First, this tests that COPY TO works correctly by:
+
+        - populating a table with data,
+        - using COPY TO via cqlsh to copy that table to a csv file,
+        - reading the table with SELECT, then
+        - asserting the contents selected are the same as the contents of the csv file.
+
+        Then, this tests that COPY FROM works correctly by:
+
+        - truncating the table created above,
+        - using COPY FROM to import the values in the table into the newly-empty table,
+        - SELECTing the contents of the table, then
+        - asserting the new contents are the same as the old contents.
+        """
         self.cluster.populate(1).start()
         node1, = self.cluster.nodelist()
 
@@ -552,7 +616,13 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.1')
     def test_float_formatting(self):
-        """ Tests for CASSANDRA-9224, check format of float and double values"""
+        """
+        @jira_ticket 9224
+
+        Tests that cqlsh handles floats and doubles correctly by using cqlsh
+        to INSERT values with different levels of precision, then SELECTing
+        those values and asserting they are displayed as expected.
+        """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
 
@@ -733,7 +803,12 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.2')
     def test_int_values(self):
-        """ Tests for CASSANDRA-9399, check tables with int, bigint, smallint and tinyint values"""
+        """
+        @jira_ticket 9399
+
+        Tests that cqlsh correctly INSERTs, SELECTs, and displays ints,
+        bigints, smallints, and tinyints.
+        """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
 
@@ -773,7 +848,12 @@ CREATE TABLE int_checks.values (
 
     @since('2.2')
     def test_datetime_values(self):
-        """ Tests for CASSANDRA-9399, check tables with date and time values"""
+        """
+        @jira_ticket 9399
+
+        Tests that cqlsh correctly INSERTs, SELECTs, and displays date and
+        time values.
+        """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
 
