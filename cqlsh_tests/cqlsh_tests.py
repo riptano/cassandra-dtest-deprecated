@@ -7,12 +7,8 @@ from cassandra.concurrent import execute_concurrent_with_args
 import csv
 import datetime
 from decimal import Decimal
-import os
-import subprocess
-import sys
 from tempfile import NamedTemporaryFile
 from uuid import UUID, uuid4
-from distutils.version import LooseVersion
 from tools import create_c1c2_table, insert_c1c2, since, rows_to_list
 from assertions import assert_all, assert_none
 
@@ -290,7 +286,8 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
             'I can eat glass and it does not hurt me' : 1400
         })
 
-        output, err = self.run_cqlsh(node1, 'use testks; SELECT * FROM varcharmaptable')
+        output, err = node1.run_cqlsh('use testks; SELECT * FROM varcharmaptable',
+                                      return_output=True)
 
         self.assertEquals(output.count('Можам да јадам стакло, а не ме штета.'), 16)
         self.assertEquals(output.count(' ⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑'), 16)
@@ -360,9 +357,12 @@ INSERT INTO has_all_types (num, intcol, asciicol, bigintcol, blobcol, booleancol
                            timestampcol, uuidcol, varcharcol, varintcol)
 VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDecimal(0x),
         blobAsDouble(0x), blobAsFloat(0x), '', blobAsTimestamp(0x), blobAsUuid(0x), '',
-        blobAsVarint(0x))""".encode("utf-8"))
+        blobAsVarint(0x))""".encode("utf-8"),
+        return_output=True)
 
-        output, err = self.run_cqlsh(node1, "select intcol, bigintcol, varintcol from CASSANDRA_7196.has_all_types where num in (0, 1, 2, 3, 4)")
+        output, err = node1.run_cqlsh("select intcol, bigintcol, varintcol from CASSANDRA_7196.has_all_types where num in (0, 1, 2, 3, 4)",
+                                      return_output=True)
+
         if common.is_win():
             output = output.replace('\r', '')
 
@@ -391,13 +391,16 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         for n in xrange(100):
             insert_c1c2(session, n)
 
-        out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM ks.cf')
+        out, err = node1.run_cqlsh('TRACING ON; SELECT * FROM ks.cf',
+                                   return_output=True)
         self.assertIn('Tracing session: ', out)
 
-        out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM system_traces.events')
+        out, err = node1.run_cqlsh('TRACING ON; SELECT * FROM system_traces.events',
+                                   return_output=True)
         self.assertNotIn('Tracing session: ', out)
 
-        out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM system_traces.sessions')
+        out, err = node1.run_cqlsh('TRACING ON; SELECT * FROM system_traces.sessions',
+                                   return_output=True)
         self.assertNotIn('Tracing session: ', out)
 
     @since('2.1')
@@ -431,12 +434,15 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             VALUES (62c36092-82a1-3a00-93d1-46196ee77204, {firstname: 'Marie-Claude', lastname: 'Josset'});
             """)
 
-        out, err = self.run_cqlsh(node1, "SELECT name.lastname FROM ks.users WHERE id=62c36092-82a1-3a00-93d1-46196ee77204")
+        out, err = node1.run_cqlsh("SELECT name.lastname FROM ks.users WHERE id=62c36092-82a1-3a00-93d1-46196ee77204",
+                                   return_output=True)
         self.assertNotIn('list index out of range', err)
         ##If this assertion fails check CASSANDRA-7891
 
     def verify_output(self, query, node, expected):
-            output, err = self.run_cqlsh(node, query, ['-u', 'cassandra', '-p', 'cassandra'])
+            output, err = node.run_cqlsh(query,
+                                         cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'],
+                                         return_output=True)
             if common.is_win():
                 output = output.replace('\r', '')
             if len(err) > 0:
@@ -555,7 +561,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE formatting WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             use formatting;
             create TABLE values ( part text, id int, val1 double, val2 float, PRIMARY KEY (part, id) );
@@ -591,7 +597,8 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             insert into values (part, id, val1, val2) VALUES ('+', 30, 11116.12345, 11116.12345);
             insert into values (part, id, val1, val2) VALUES ('+', 31, 111116.12345, 111116.12345);
             insert into values (part, id, val1, val2) VALUES ('+', 32, 1111116.12345, 1111116.12345);
-            insert into values (part, id, val1, val2) VALUES ('+', 33, 11111116.12345, 11111116.12345)""")
+            insert into values (part, id, val1, val2) VALUES ('+', 33, 11111116.12345, 11111116.12345)""",
+                                         return_output=True)
 
         self.verify_output("select * from formatting.values where part = '+'", node1, """
  part | id | val1        | val2
@@ -631,7 +638,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
     + | 33 |  1.1111e+07 |  1.1111e+07
 """)
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             use formatting;
             insert into values (part, id, val1, val2) VALUES ('-', 1, -0.00000006, -0.00000006);
             insert into values (part, id, val1, val2) VALUES ('-', 2, -0.0000006, -0.0000006);
@@ -665,7 +672,8 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             insert into values (part, id, val1, val2) VALUES ('-', 30, -11116.12345, -11116.12345);
             insert into values (part, id, val1, val2) VALUES ('-', 31, -111116.12345, -111116.12345);
             insert into values (part, id, val1, val2) VALUES ('-', 32, -1111116.12345, -1111116.12345);
-            insert into values (part, id, val1, val2) VALUES ('-', 33, -11111116.12345, -11111116.12345)""")
+            insert into values (part, id, val1, val2) VALUES ('-', 33, -11111116.12345, -11111116.12345)""",
+                                         return_output=True)
 
         self.verify_output("select * from formatting.values where part = '-'", node1, """
  part | id | val1         | val2
@@ -705,14 +713,15 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
     - | 33 |  -1.1111e+07 |  -1.1111e+07
 """)
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             use formatting;
             insert into values (part, id, val1, val2) VALUES ('0', 1, 0, 0);
             insert into values (part, id, val1, val2) VALUES ('0', 2, 0.000000000001, 0.000000000001);
             insert into values (part, id, val1, val2) VALUES ('0', 3, 0.0000000000001, 0.0000000000001);
             insert into values (part, id, val1, val2) VALUES ('0', 4, 0.00000000000001, 0.00000000000001);
             insert into values (part, id, val1, val2) VALUES ('0', 5, 0.000000000000001, 0.000000000000001);
-            insert into values (part, id, val1, val2) VALUES ('0', 6, 0.0000000000000001, 0.0000000000000001)""")
+            insert into values (part, id, val1, val2) VALUES ('0', 6, 0.0000000000000001, 0.0000000000000001)""",
+                                         return_output=True)
 
         self.verify_output("select * from formatting.values where part = '0'", node1, """
  part | id | val1  | val2
@@ -733,14 +742,15 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE int_checks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE int_checks;
             CREATE TABLE values (part text, val1 int, val2 bigint, val3 smallint, val4 tinyint, PRIMARY KEY (part));
             INSERT INTO values (part, val1, val2, val3, val4) VALUES ('1', 1, 1, 1, 1);
             INSERT INTO values (part, val1, val2, val3, val4) VALUES ('0', 0, 0, 0, 0);
             INSERT INTO values (part, val1, val2, val3, val4) VALUES ('min', %d, %d, -32768, -128);
-            INSERT INTO values (part, val1, val2, val3, val4) VALUES ('max', %d, %d, 32767, 127)""" % (-1<<31, -1<<63, (1<<31) - 1, (1<<63) -1))
+            INSERT INTO values (part, val1, val2, val3, val4) VALUES ('max', %d, %d, 32767, 127)""" % (-1<<31, -1<<63, (1<<31) - 1, (1<<63) -1),
+                                         return_output=True)
 
         if len(stderr) > 0:
             debug(stderr)
@@ -772,7 +782,7 @@ CREATE TABLE int_checks.values (
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE datetime_checks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE datetime_checks;
             CREATE TABLE values (d date, t time, PRIMARY KEY (d, t));
@@ -783,7 +793,8 @@ CREATE TABLE int_checks.values (
             INSERT INTO values (d, t) VALUES ('%d-1-1', '01:00:00.000000000');
             INSERT INTO values (d, t) VALUES ('%d-1-1', '02:00:00.000000000');
             INSERT INTO values (d, t) VALUES ('%d-1-1', '03:00:00.000000000')"""
-            % (datetime.MINYEAR-1, datetime.MINYEAR, datetime.MAXYEAR, datetime.MAXYEAR+1,))
+            % (datetime.MINYEAR-1, datetime.MINYEAR, datetime.MAXYEAR, datetime.MAXYEAR+1,),
+                                         return_output=True)
             # outside the MIN and MAX range it should print the number of days from the epoch
 
         if len(stderr) > 0:
@@ -821,13 +832,14 @@ CREATE TABLE datetime_checks.values (
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE tracing_checks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE tracing_checks;
             CREATE TABLE test (id int, val text, PRIMARY KEY (id));
             INSERT INTO test (id, val) VALUES (1, 'adfad');
             INSERT INTO test (id, val) VALUES (2, 'lkjlk');
-            INSERT INTO test (id, val) VALUES (3, 'iuiou')""")
+            INSERT INTO test (id, val) VALUES (3, 'iuiou')""",
+                                         return_output=True)
 
         if len(stderr) > 0:
             debug(stderr)
@@ -855,10 +867,11 @@ Tracing session:""")
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE client_warnings WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE client_warnings;
-            CREATE TABLE test (id int, val text, PRIMARY KEY (id))""")
+            CREATE TABLE test (id int, val text, PRIMARY KEY (id))""",
+                                         return_output=True)
 
         if len(stderr) > 0:
             debug(stderr)
@@ -868,25 +881,6 @@ Tracing session:""")
                             node1, """
 Warnings :
 Unlogged batch covering 2 partitions detected against table [client_warnings.test]. You should use a logged batch for atomicity, or asynchronous writes for performance.""")
-
-    def run_cqlsh(self, node, cmds, cqlsh_options=[]):
-        cdir = node.get_install_dir()
-        cli = os.path.join(cdir, 'bin', common.platform_binary('cqlsh'))
-        env = common.make_cassandra_env(cdir, node.get_path())
-        env['LANG'] = 'en_US.UTF-8'
-        if LooseVersion(self.cluster.version()) >= LooseVersion('2.1'):
-            host = node.network_interfaces['binary'][0]
-            port = node.network_interfaces['binary'][1]
-        else:
-            host = node.network_interfaces['thrift'][0]
-            port = node.network_interfaces['thrift'][1]
-        args = cqlsh_options + [ host, str(port) ]
-        sys.stdout.flush()
-        p = subprocess.Popen([ cli ] + args, env=env, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        for cmd in cmds.split(';'):
-            p.stdin.write(cmd + ';\n')
-        p.stdin.write("quit;\n")
-        return p.communicate()
 
 
 class CqlshSmokeTest(Tester):
