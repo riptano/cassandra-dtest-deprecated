@@ -17,10 +17,6 @@ from tools import create_c1c2_table, insert_c1c2, rows_to_list, since
 
 
 class TestCqlsh(Tester):
-
-    def __init__(self, *args, **kwargs):
-        Tester.__init__(self, *args, **kwargs)
-
     @classmethod
     def setUpClass(cls):
         cls._cached_driver_methods = monkeypatch_driver()
