@@ -437,16 +437,16 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         ##If this assertion fails check CASSANDRA-7891
 
     def verify_output(self, query, node, expected):
-            output, err = node.run_cqlsh(query,
-                                         cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'],
-                                         return_output=True)
-            if common.is_win():
-                output = output.replace('\r', '')
-            if len(err) > 0:
-                debug(err)
-                assert False, "Failed to execute cqlsh"
-            debug(output)
-            self.assertTrue(expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected))
+        output, err = node.run_cqlsh(query,
+                                        cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'],
+                                        return_output=True)
+        if common.is_win():
+            output = output.replace('\r', '')
+        if len(err) > 0:
+            debug(err)
+            assert False, "Failed to execute cqlsh"
+        debug(output)
+        self.assertTrue(expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected))
 
     def test_list_queries(self):
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
