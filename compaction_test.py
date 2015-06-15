@@ -3,6 +3,7 @@ import time
 from assertions import assert_none, assert_one
 import tempfile
 import os
+from tools import since
 
 class TestCompaction(Tester):
 
@@ -84,6 +85,7 @@ class TestCompaction(Tester):
 
         self.assertLess(finalValue, initialValue)
 
+    @since('2.1')
     def sstable_deletion_test(self):
         """Test that sstables are deleted properly when able to be.
         Insert data setting gc_grace_seconds to 0, and determine sstable
