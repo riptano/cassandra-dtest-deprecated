@@ -53,6 +53,7 @@ class TestCompaction(Tester):
         """Ensure that data size does not have unwarranted increases after compaction.
         Insert data and check data size before and after a compaction.
         """
+        self.skip_if_no_major_compaction()
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -89,6 +90,7 @@ class TestCompaction(Tester):
         Insert data setting gc_grace_seconds to 0, and determine sstable
         is deleted upon data deletion.
         """
+        self.skip_if_no_major_compaction()
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -150,6 +152,7 @@ class TestCompaction(Tester):
         """Test setting compaction throughput.
         Set throughput, insert data and ensure compaction performance corresponds.
         """
+        self.skip_if_no_major_compaction()
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -211,6 +214,11 @@ class TestCompaction(Tester):
                 cluster.clear()
                 time.sleep(5)
                 cluster.start(wait_for_binary_proto=True)
+
+    def skip_if_no_major_compaction(self):
+        if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':
+            self.skipTest('major compaction not implemented for LCS in this version of Cassandra')
+
 
 
 def stress_write(node):
