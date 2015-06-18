@@ -4,9 +4,10 @@ from assertions import assert_none, assert_one
 import tempfile
 import os
 
+
 class TestCompaction(Tester):
 
-    __test__= False
+    __test__ = False
 
     def __init__(self, *args, **kwargs):
         kwargs['cluster_options'] = {'start_rpc': 'true'}
@@ -22,7 +23,6 @@ class TestCompaction(Tester):
 
         cursor = self.patient_cql_connection(node1)
         self.create_ks(cursor, 'ks', 1)
-
 
         cursor.execute("create table ks.cf (key int PRIMARY KEY, val int) with compaction = {'class':'" + self.strategy + "'} and gc_grace_seconds = 30;")
 
@@ -53,6 +53,7 @@ class TestCompaction(Tester):
         """Ensure that data size does not have unwarranted increases after compaction.
         Insert data and check data size before and after a compaction.
         """
+        self.skip_if_no_major_compaction()
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -89,12 +90,13 @@ class TestCompaction(Tester):
         Insert data setting gc_grace_seconds to 0, and determine sstable
         is deleted upon data deletion.
         """
+        self.skip_if_no_major_compaction()
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
         cursor = self.patient_cql_connection(node1)
         self.create_ks(cursor, 'ks', 1)
-        cursor.execute("create table cf (key int PRIMARY KEY, val int) with gc_grace_seconds = 0 and compaction= {'class':'" +self.strategy+"'}")
+        cursor.execute("create table cf (key int PRIMARY KEY, val int) with gc_grace_seconds = 0 and compaction= {'class':'" + self.strategy + "'}")
 
         for x in range(0, 100):
             cursor.execute('insert into cf (key, val) values (' + str(x) + ',1)')
@@ -131,7 +133,7 @@ class TestCompaction(Tester):
         # max sstable age is 0.5 minute:
         cursor.execute("create table cf (key int PRIMARY KEY, val int) with gc_grace_seconds = 0 and compaction= {'class':'DateTieredCompactionStrategy', 'max_sstable_age_days':0.00035, 'min_threshold':2}")
 
-        #insert data
+        # insert data
         for x in range(0, 300):
             cursor.execute('insert into cf (key, val) values (' + str(x) + ',1) USING TTL 35')
         node1.flush()
@@ -141,15 +143,16 @@ class TestCompaction(Tester):
         expired_sstable = expired_sstables[0]
         # write a new sstable to make DTCS check for expired sstables:
         for x in range(0, 100):
-            cursor.execute('insert into cf (key, val) values (%d, %d)'%(x,x))
+            cursor.execute('insert into cf (key, val) values (%d, %d)' % (x, x))
         node1.flush()
         time.sleep(5)
-        assert expired_sstable not in node1.get_sstables('ks','cf')
+        assert expired_sstable not in node1.get_sstables('ks', 'cf')
 
     def compaction_throughput_test(self):
         """Test setting compaction throughput.
         Set throughput, insert data and ensure compaction performance corresponds.
         """
+        self.skip_if_no_major_compaction()
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -184,7 +187,6 @@ class TestCompaction(Tester):
             cluster.populate(1).start(wait_for_binary_proto=True)
             [node1] = cluster.nodelist()
 
-
             for strat in strategies:
                 cursor = self.patient_cql_connection(node1)
                 self.create_ks(cursor, 'ks', 1)
@@ -201,8 +203,8 @@ class TestCompaction(Tester):
 
                 cursor.execute("alter table ks.cf with compaction = {'class':'" + strat + "'};")
 
-                for x in range(11,100):
-                    assert_one(cursor, "select * from ks.cf where key =" + str(x),[x, 1])
+                for x in range(11, 100):
+                    assert_one(cursor, "select * from ks.cf where key =" + str(x), [x, 1])
 
                 for x in range(0, 10):
                     assert_none(cursor, 'select * from cf where key = ' + str(x))
@@ -211,6 +213,10 @@ class TestCompaction(Tester):
                 cluster.clear()
                 time.sleep(5)
                 cluster.start(wait_for_binary_proto=True)
+
+    def skip_if_no_major_compaction(self):
+        if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':
+            self.skipTest('major compaction not implemented for LCS in this version of Cassandra')
 
 
 def stress_write(node):
@@ -223,5 +229,4 @@ def stress_write(node):
 strategies = ['LeveledCompactionStrategy', 'SizeTieredCompactionStrategy', 'DateTieredCompactionStrategy']
 for strategy in strategies:
     cls_name = ('TestCompaction_with_' + strategy)
-    vars()[cls_name] = type(cls_name, (TestCompaction,), {'strategy': strategy, '__test__':True})
-
+    vars()[cls_name] = type(cls_name, (TestCompaction,), {'strategy': strategy, '__test__': True})
