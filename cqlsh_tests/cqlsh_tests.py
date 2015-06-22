@@ -1,28 +1,25 @@
 # -*- coding: utf-8 -*-
-from dtest import Tester, debug
-from cassandra import InvalidRequest
-from ccmlib import common
 import binascii
-from cassandra.concurrent import execute_concurrent_with_args
 import csv
 import datetime
 from decimal import Decimal
-import os
-import subprocess
-import sys
 from tempfile import NamedTemporaryFile
 from uuid import UUID, uuid4
-from distutils.version import LooseVersion
-from tools import create_c1c2_table, insert_c1c2, since, rows_to_list
-from assertions import assert_all, assert_none
 
+from cassandra import InvalidRequest
+from cassandra.concurrent import execute_concurrent_with_args
+
+from assertions import assert_all, assert_none
+from ccmlib import common
 from cqlsh_tools import monkeypatch_driver, unmonkeypatch_driver
+from dtest import Tester, debug
+from tools import create_c1c2_table, insert_c1c2, rows_to_list, since
 
 
 class TestCqlsh(Tester):
-
-    def __init__(self, *args, **kwargs):
-        Tester.__init__(self, *args, **kwargs)
+    """
+    Tests for a variety of cqlsh behavior.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -33,6 +30,12 @@ class TestCqlsh(Tester):
         unmonkeypatch_driver(cls._cached_driver_methods)
 
     def test_simple_insert(self):
+        """
+        Tests INSERTs through cqlsh by:
+
+        - using cqlsh to create a table and insert values into it, then
+        - using a normal session to select from the table and assert it contains the expected values.
+        """
 
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
@@ -56,6 +59,12 @@ class TestCqlsh(Tester):
                          {k : v for k,v in rows})
 
     def test_eat_glass(self):
+        """
+        Tests that cqlsh works with UTF-8 strings by using cqlsh to create
+        tables and insert non-ASCII strings into them, then selecting from
+        those tables with a normal session to assert they contain the expected
+        values.
+        """
 
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
@@ -290,7 +299,8 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
             'I can eat glass and it does not hurt me' : 1400
         })
 
-        output, err = self.run_cqlsh(node1, 'use testks; SELECT * FROM varcharmaptable')
+        output, err = node1.run_cqlsh('use testks; SELECT * FROM varcharmaptable',
+                                      return_output=True)
 
         self.assertEquals(output.count('Можам да јадам стакло, а не ме штета.'), 16)
         self.assertEquals(output.count(' ⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑'), 16)
@@ -298,7 +308,9 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
 
     def test_with_empty_values(self):
         """
-        CASSANDRA-7196. Make sure the server returns empty values and CQLSH prints them properly
+        @jira_ticket 7196
+
+        Tests that cqlsh correctly writes, reads, and displays empty values.
         """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
@@ -360,9 +372,12 @@ INSERT INTO has_all_types (num, intcol, asciicol, bigintcol, blobcol, booleancol
                            timestampcol, uuidcol, varcharcol, varintcol)
 VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDecimal(0x),
         blobAsDouble(0x), blobAsFloat(0x), '', blobAsTimestamp(0x), blobAsUuid(0x), '',
-        blobAsVarint(0x))""".encode("utf-8"))
+        blobAsVarint(0x))""".encode("utf-8"),
+        return_output=True)
 
-        output, err = self.run_cqlsh(node1, "select intcol, bigintcol, varintcol from CASSANDRA_7196.has_all_types where num in (0, 1, 2, 3, 4)")
+        output, err = node1.run_cqlsh("select intcol, bigintcol, varintcol from CASSANDRA_7196.has_all_types where num in (0, 1, 2, 3, 4)",
+                                      return_output=True)
+
         if common.is_win():
             output = output.replace('\r', '')
 
@@ -379,6 +394,10 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.0')
     def tracing_from_system_traces_test(self):
+        """
+        Tests that traces are printed in cqlsh after tracing is turned on, then
+        no longer printed when tracing is turned off.
+        """
         self.cluster.populate(1).start(wait_for_binary_proto=True)
 
         node1, = self.cluster.nodelist()
@@ -391,17 +410,30 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         for n in xrange(100):
             insert_c1c2(session, n)
 
-        out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM ks.cf')
+        out, err = node1.run_cqlsh('TRACING ON; SELECT * FROM ks.cf',
+                                   return_output=True)
         self.assertIn('Tracing session: ', out)
 
-        out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM system_traces.events')
+        out, err = node1.run_cqlsh('TRACING ON; SELECT * FROM system_traces.events',
+                                   return_output=True)
         self.assertNotIn('Tracing session: ', out)
 
-        out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM system_traces.sessions')
+        out, err = node1.run_cqlsh('TRACING ON; SELECT * FROM system_traces.sessions',
+                                   return_output=True)
         self.assertNotIn('Tracing session: ', out)
 
     @since('2.1')
     def select_element_inside_udt_test(self):
+        """
+        @jira_ticket 7891
+
+        Tests that selecting values inside user-defined collection types works
+        from cqlsh by:
+
+        - creating UDTs, tables containing those UDTs, and inserting values into those tables via a normal connection,
+        - selecting from these tables with cqlsh, then
+        - asserting the selected values are what we expect.
+        """
         self.cluster.populate(1).start()
 
         node1, = self.cluster.nodelist()
@@ -431,21 +463,39 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             VALUES (62c36092-82a1-3a00-93d1-46196ee77204, {firstname: 'Marie-Claude', lastname: 'Josset'});
             """)
 
-        out, err = self.run_cqlsh(node1, "SELECT name.lastname FROM ks.users WHERE id=62c36092-82a1-3a00-93d1-46196ee77204")
+        out, err = node1.run_cqlsh("SELECT name.lastname FROM ks.users WHERE id=62c36092-82a1-3a00-93d1-46196ee77204",
+                                   return_output=True)
         self.assertNotIn('list index out of range', err)
         ##If this assertion fails check CASSANDRA-7891
 
     def verify_output(self, query, node, expected):
-            output, err = self.run_cqlsh(node, query, ['-u', 'cassandra', '-p', 'cassandra'])
-            if common.is_win():
-                output = output.replace('\r', '')
-            if len(err) > 0:
-                debug(err)
-                assert False, "Failed to execute cqlsh"
-            debug(output)
-            self.assertTrue(expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected))
+        """
+        @param query the CQL query to be executed through cqlsh
+        @param node the node on which to call the cqlsh query
+        @param expected the expected output from cqlsh
+
+        A utility method used by test methods to execute cqlsh and compare its
+        ouput to expected values.
+        """
+        output, err = node.run_cqlsh(query,
+                                        cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'],
+                                        return_output=True)
+        if common.is_win():
+            output = output.replace('\r', '')
+        if len(err) > 0:
+            debug(err)
+            assert False, "Failed to execute cqlsh"
+        debug(output)
+        self.assertTrue(expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected))
 
     def test_list_queries(self):
+        """
+        Tests that the user-showing commands behave correctly in cqlsh by:
+
+        - connecting to a cluster, authenticated as a superuser,
+        - creating a non-superuser user with that connection, then
+        - running LIST USERS and LIST ALL PERMISSIONS and asserting the new user is correctly shown in the output.
+        """
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
                   'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
                   'permissions_validity_in_ms': '0'}
@@ -507,6 +557,23 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 """)
 
     def test_copy_to(self):
+        """
+        Tests that COPY TO and COPY FROM work correctly.
+
+        First, this tests that COPY TO works correctly by:
+
+        - populating a table with data,
+        - using COPY TO via cqlsh to copy that table to a csv file,
+        - reading the table with SELECT, then
+        - asserting the contents selected are the same as the contents of the csv file.
+
+        Then, this tests that COPY FROM works correctly by:
+
+        - truncating the table created above,
+        - using COPY FROM to import the values in the table into the newly-empty table,
+        - SELECTing the contents of the table, then
+        - asserting the new contents are the same as the old contents.
+        """
         self.cluster.populate(1).start()
         node1, = self.cluster.nodelist()
 
@@ -549,13 +616,19 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.1')
     def test_float_formatting(self):
-        """ Tests for CASSANDRA-9224, check format of float and double values"""
+        """
+        @jira_ticket 9224
+
+        Tests that cqlsh handles floats and doubles correctly by using cqlsh
+        to INSERT values with different levels of precision, then SELECTing
+        those values and asserting they are displayed as expected.
+        """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE formatting WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             use formatting;
             create TABLE values ( part text, id int, val1 double, val2 float, PRIMARY KEY (part, id) );
@@ -591,7 +664,8 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             insert into values (part, id, val1, val2) VALUES ('+', 30, 11116.12345, 11116.12345);
             insert into values (part, id, val1, val2) VALUES ('+', 31, 111116.12345, 111116.12345);
             insert into values (part, id, val1, val2) VALUES ('+', 32, 1111116.12345, 1111116.12345);
-            insert into values (part, id, val1, val2) VALUES ('+', 33, 11111116.12345, 11111116.12345)""")
+            insert into values (part, id, val1, val2) VALUES ('+', 33, 11111116.12345, 11111116.12345)""",
+                                         return_output=True)
 
         self.verify_output("select * from formatting.values where part = '+'", node1, """
  part | id | val1        | val2
@@ -631,7 +705,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
     + | 33 |  1.1111e+07 |  1.1111e+07
 """)
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             use formatting;
             insert into values (part, id, val1, val2) VALUES ('-', 1, -0.00000006, -0.00000006);
             insert into values (part, id, val1, val2) VALUES ('-', 2, -0.0000006, -0.0000006);
@@ -665,7 +739,8 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             insert into values (part, id, val1, val2) VALUES ('-', 30, -11116.12345, -11116.12345);
             insert into values (part, id, val1, val2) VALUES ('-', 31, -111116.12345, -111116.12345);
             insert into values (part, id, val1, val2) VALUES ('-', 32, -1111116.12345, -1111116.12345);
-            insert into values (part, id, val1, val2) VALUES ('-', 33, -11111116.12345, -11111116.12345)""")
+            insert into values (part, id, val1, val2) VALUES ('-', 33, -11111116.12345, -11111116.12345)""",
+                                         return_output=True)
 
         self.verify_output("select * from formatting.values where part = '-'", node1, """
  part | id | val1         | val2
@@ -705,14 +780,15 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
     - | 33 |  -1.1111e+07 |  -1.1111e+07
 """)
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             use formatting;
             insert into values (part, id, val1, val2) VALUES ('0', 1, 0, 0);
             insert into values (part, id, val1, val2) VALUES ('0', 2, 0.000000000001, 0.000000000001);
             insert into values (part, id, val1, val2) VALUES ('0', 3, 0.0000000000001, 0.0000000000001);
             insert into values (part, id, val1, val2) VALUES ('0', 4, 0.00000000000001, 0.00000000000001);
             insert into values (part, id, val1, val2) VALUES ('0', 5, 0.000000000000001, 0.000000000000001);
-            insert into values (part, id, val1, val2) VALUES ('0', 6, 0.0000000000000001, 0.0000000000000001)""")
+            insert into values (part, id, val1, val2) VALUES ('0', 6, 0.0000000000000001, 0.0000000000000001)""",
+                                         return_output=True)
 
         self.verify_output("select * from formatting.values where part = '0'", node1, """
  part | id | val1  | val2
@@ -727,20 +803,26 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
     @since('2.2')
     def test_int_values(self):
-        """ Tests for CASSANDRA-9399, check tables with int, bigint, smallint and tinyint values"""
+        """
+        @jira_ticket 9399
+
+        Tests that cqlsh correctly INSERTs, SELECTs, and displays ints,
+        bigints, smallints, and tinyints.
+        """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE int_checks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE int_checks;
             CREATE TABLE values (part text, val1 int, val2 bigint, val3 smallint, val4 tinyint, PRIMARY KEY (part));
             INSERT INTO values (part, val1, val2, val3, val4) VALUES ('1', 1, 1, 1, 1);
             INSERT INTO values (part, val1, val2, val3, val4) VALUES ('0', 0, 0, 0, 0);
             INSERT INTO values (part, val1, val2, val3, val4) VALUES ('min', %d, %d, -32768, -128);
-            INSERT INTO values (part, val1, val2, val3, val4) VALUES ('max', %d, %d, 32767, 127)""" % (-1<<31, -1<<63, (1<<31) - 1, (1<<63) -1))
+            INSERT INTO values (part, val1, val2, val3, val4) VALUES ('max', %d, %d, 32767, 127)""" % (-1<<31, -1<<63, (1<<31) - 1, (1<<63) -1),
+                                         return_output=True)
 
         if len(stderr) > 0:
             debug(stderr)
@@ -766,13 +848,18 @@ CREATE TABLE int_checks.values (
 
     @since('2.2')
     def test_datetime_values(self):
-        """ Tests for CASSANDRA-9399, check tables with date and time values"""
+        """
+        @jira_ticket 9399
+
+        Tests that cqlsh correctly INSERTs, SELECTs, and displays date and
+        time values.
+        """
         self.cluster.populate(1)
         self.cluster.start(wait_for_binary_proto=True)
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE datetime_checks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE datetime_checks;
             CREATE TABLE values (d date, t time, PRIMARY KEY (d, t));
@@ -783,7 +870,8 @@ CREATE TABLE int_checks.values (
             INSERT INTO values (d, t) VALUES ('%d-1-1', '01:00:00.000000000');
             INSERT INTO values (d, t) VALUES ('%d-1-1', '02:00:00.000000000');
             INSERT INTO values (d, t) VALUES ('%d-1-1', '03:00:00.000000000')"""
-            % (datetime.MINYEAR-1, datetime.MINYEAR, datetime.MAXYEAR, datetime.MAXYEAR+1,))
+            % (datetime.MINYEAR-1, datetime.MINYEAR, datetime.MAXYEAR, datetime.MAXYEAR+1,),
+                                         return_output=True)
             # outside the MIN and MAX range it should print the number of days from the epoch
 
         if len(stderr) > 0:
@@ -821,13 +909,14 @@ CREATE TABLE datetime_checks.values (
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE tracing_checks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE tracing_checks;
             CREATE TABLE test (id int, val text, PRIMARY KEY (id));
             INSERT INTO test (id, val) VALUES (1, 'adfad');
             INSERT INTO test (id, val) VALUES (2, 'lkjlk');
-            INSERT INTO test (id, val) VALUES (3, 'iuiou')""")
+            INSERT INTO test (id, val) VALUES (3, 'iuiou')""",
+                                         return_output=True)
 
         if len(stderr) > 0:
             debug(stderr)
@@ -855,10 +944,11 @@ Tracing session:""")
 
         node1, = self.cluster.nodelist()
 
-        stdout, stderr = self.run_cqlsh(node1,cmds = """
+        stdout, stderr = node1.run_cqlsh(cmds = """
             CREATE KEYSPACE client_warnings WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
             USE client_warnings;
-            CREATE TABLE test (id int, val text, PRIMARY KEY (id))""")
+            CREATE TABLE test (id int, val text, PRIMARY KEY (id))""",
+                                         return_output=True)
 
         if len(stderr) > 0:
             debug(stderr)
@@ -868,25 +958,6 @@ Tracing session:""")
                             node1, """
 Warnings :
 Unlogged batch covering 2 partitions detected against table [client_warnings.test]. You should use a logged batch for atomicity, or asynchronous writes for performance.""")
-
-    def run_cqlsh(self, node, cmds, cqlsh_options=[]):
-        cdir = node.get_install_dir()
-        cli = os.path.join(cdir, 'bin', common.platform_binary('cqlsh'))
-        env = common.make_cassandra_env(cdir, node.get_path())
-        env['LANG'] = 'en_US.UTF-8'
-        if LooseVersion(self.cluster.version()) >= LooseVersion('2.1'):
-            host = node.network_interfaces['binary'][0]
-            port = node.network_interfaces['binary'][1]
-        else:
-            host = node.network_interfaces['thrift'][0]
-            port = node.network_interfaces['thrift'][1]
-        args = cqlsh_options + [ host, str(port) ]
-        sys.stdout.flush()
-        p = subprocess.Popen([ cli ] + args, env=env, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        for cmd in cmds.split(';'):
-            p.stdin.write(cmd + ';\n')
-        p.stdin.write("quit;\n")
-        return p.communicate()
 
 
 class CqlshSmokeTest(Tester):
