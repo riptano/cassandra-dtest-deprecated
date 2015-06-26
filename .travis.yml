@@ -6,5 +6,5 @@ install:
 script:
   # we want pyflakes to check all files for unused imports only
   # we use flake8 because it allows us to ignore other warnings
-  - flake8 --ignore=E,W,F811,F821,F822,F823,F831,F841,N8,C9
+  - flake8 --ignore=E,W,F811,F821,F822,F823,F831,F841,N8,C9 .
   - git diff master -U0 | pep8 --diff --max-line-length=200
