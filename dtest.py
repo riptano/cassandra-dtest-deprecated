@@ -22,7 +22,7 @@ LAST_LOG = os.path.join(LOG_SAVED_DIR, "last")
 LAST_TEST_DIR='last_test_dir'
 
 DEFAULT_DIR='./'
-config = ConfigParser.RawConfigParser()
+config=ConfigParser.RawConfigParser()
 if len(config.read(os.path.expanduser('~/.cassandra-dtest'))) > 0:
     if config.has_option('main', 'default_dir'):
         DEFAULT_DIR=os.path.expanduser(config.get('main', 'default_dir'))
