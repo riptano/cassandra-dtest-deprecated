@@ -6,6 +6,8 @@ import random, time, uuid
 from assertions import assert_invalid, assert_one
 from tools import rows_to_list, since
 
+import unittest
+
 class TestCounters(Tester):
 
     def simple_increment_test(self):
