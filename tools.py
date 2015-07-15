@@ -269,7 +269,7 @@ def require(require_pattern, broken_in=None):
         # otherwise, skip with a message
         else:
             def tag_and_skip(decorated):
-                return unittest.skip('require ' + str(require_pattern))(tagging_decorator(decorated))
+                return tagging_decorator(unittest.skip('require ' + str(require_pattern))(decorated))
             return tag_and_skip
 
 
