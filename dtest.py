@@ -21,6 +21,7 @@ from cassandra.cluster import Cluster as PyCluster
 from cassandra.cluster import NoHostAvailable
 from cassandra.policies import WhiteListRoundRobinPolicy, RetryPolicy
 from nose.exc import SkipTest
+from jmxutils import JolokiaAgent, make_mbean
 
 from ccmlib.cluster import Cluster
 from ccmlib.cluster_factory import ClusterFactory
@@ -219,6 +220,19 @@ class Tester(TestCase):
             cluster.set_log_level("TRACE")
         self.var_debug(cluster)
         self.var_trace(cluster)
+
+    # Changes in the key cache capacity indicates that a function is still running, so by checking whether
+    # the JMX value remained unchanged, we know when the process has stopped.
+    def delay(self, node):
+        mbean = make_mbean('metrics', 'CommitLog', name='PendingTasks')
+        with JolokiaAgent(node) as jmx:
+            moved = False
+            before = None
+            while not moved:
+                after = jmx.read_attribute(mbean, 'Value')
+                if before == after:
+                    moved = True
+                before = after
 
     def _cleanup_cluster(self):
         if SILENCE_DRIVER_ON_SHUTDOWN:
