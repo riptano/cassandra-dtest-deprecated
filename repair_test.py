@@ -6,7 +6,7 @@ from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
 from dtest import Tester, debug
-from tools import insert_c1c2, no_vnodes, query_c1c2, since
+from tools import parallel_insert_c1c2, update_c1c2, no_vnodes, query_c1c2, since
 
 
 class TestRepair(Tester):
@@ -96,14 +96,12 @@ class TestRepair(Tester):
 
         # Insert 1000 keys, kill node 3, insert 1 key, restart node 3, insert 1000 more keys
         debug("Inserting data...")
-        for i in xrange(0, 1000):
-            insert_c1c2(session, i, ConsistencyLevel.ALL)
+        parallel_insert_c1c2(session, 0, 1000, ConsistencyLevel.ALL)
         node3.flush()
         node3.stop()
-        insert_c1c2(session, 1000, ConsistencyLevel.TWO)
+        update_c1c2(session, 1000, ConsistencyLevel.TWO)
         node3.start(wait_other_notice=True)
-        for i in xrange(1001, 2001):
-            insert_c1c2(session, i, ConsistencyLevel.ALL)
+        parallel_insert_c1c2(session, 1001, 2001, ConsistencyLevel.ALL)
 
         cluster.flush()
 
@@ -287,7 +285,6 @@ class TestRepair(Tester):
         debug("Starting cluster..")
         # populate 2 nodes in dc1, and one node each in dc2 and dc3
         cluster.populate([2, 1, 1]).start()
-        version = cluster.version()
 
         [node1, node2, node3, node4] = cluster.nodelist()
         session = self.patient_cql_connection(node1)
@@ -297,15 +294,13 @@ class TestRepair(Tester):
 
         # Insert 1000 keys, kill node 3, insert 1 key, restart node 3, insert 1000 more keys
         debug("Inserting data...")
-        for i in xrange(0, 1000):
-            insert_c1c2(session, i, ConsistencyLevel.ALL)
+        parallel_insert_c1c2(session, 0, 1000, ConsistencyLevel.ALL)
         node2.flush()
         node2.stop()
-        insert_c1c2(session, 1000, ConsistencyLevel.THREE)
+        update_c1c2(session, 1000, ConsistencyLevel.THREE)
         node2.start(wait_for_binary_proto=True, wait_other_notice=True)
         node1.watch_log_for_alive(node2)
-        for i in xrange(1001, 2001):
-            insert_c1c2(session, i, ConsistencyLevel.ALL)
+        parallel_insert_c1c2(session, 1001, 2001, ConsistencyLevel.ALL)
 
         cluster.flush()
 
