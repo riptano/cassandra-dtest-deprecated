@@ -220,6 +220,19 @@ class Tester(TestCase):
         self.var_debug(cluster)
         self.var_trace(cluster)
 
+    # Changes in the key cache capacity indicates that a function is still running, so by checking whether
+    # the JMX value remained unchanged, we know when the process has stopped.
+    def delay(self, node):
+        mbean = make_mbean('metrics', 'CommitLog', name='PendingTasks')
+        with JolokiaAgent(node) as jmx:
+            moved = False
+            before = None
+            while not moved:
+                after = jmx.read_attribute(mbean, 'Value')
+                if before == after:
+                    moved = True
+                before = after
+
     def _cleanup_cluster(self):
         if SILENCE_DRIVER_ON_SHUTDOWN:
             # driver logging is very verbose when nodes start going down -- bump up the level
