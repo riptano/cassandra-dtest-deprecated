@@ -12,6 +12,7 @@ from threading import Thread
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
+from cassandra.concurrent import execute_concurrent_with_args
 from nose.plugins.attrib import attr
 
 from ccmlib.node import Node
@@ -27,9 +28,20 @@ def create_c1c2_table(tester, session, read_repair=None):
     tester.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'}, read_repair=read_repair)
 
 
+def update_c1c2(session, index, consistency=ConsistencyLevel.QUORUM):
+    query = SimpleStatement('UPDATE cf SET c1=\'value1\', c2=\'value2\' WHERE key=\'k%d\'' % index, consistency_level=consistency)
+    session.execute(query)
+
+
 def insert_c1c2(session, key, consistency=ConsistencyLevel.QUORUM):
     query = SimpleStatement('UPDATE cf SET c1=\'value1\', c2=\'value2\' WHERE key=\'k%d\'' % key, consistency_level=consistency)
     session.execute(query)
+
+
+def parallel_insert_c1c2(session, start_index, end_index, consistency=ConsistencyLevel.QUORUM):
+    statement = session.prepare('INSERT INTO cf (key, c1, c2) VALUES (?, \'value1\', \'value2\')')
+    statement.consistency_level = consistency
+    execute_concurrent_with_args(session, statement, [['%d' % k] for k in range(start_index, end_index)], concurrency=50)
 
 
 def query_c1c2(session, key, consistency=ConsistencyLevel.QUORUM, tolerate_missing=False, must_be_missing=False):
@@ -98,7 +110,7 @@ def putget(cluster, session, cl=ConsistencyLevel.QUORUM):
     _put_with_overwrite(cluster, session, 1, cl)
 
     # reads by name
-    ks = ["\'c%02d\'" % i for i in xrange(0, 100)]
+    # ks = ["\'c%02d\'" % i for i in xrange(0, 100)]
     # We do not support proper IN queries yet
     # if cluster.version() >= "1.2":
     #    session.execute('SELECT * FROM cf USING CONSISTENCY %s WHERE key=\'k0\' AND c IN (%s)' % (cl, ','.join(ks)))
