@@ -98,7 +98,7 @@ class TestWriteFailures(Tester):
     @since('2.2')
     def test_mutation_v3(self):
         """
-            A failed mutation at v3 receives a WriteTimeout
+        A failed mutation at v3 receives a WriteTimeout
         """
         self.expected_expt = WriteTimeout
         self.protocol_version = 3
