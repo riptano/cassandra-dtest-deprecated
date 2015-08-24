@@ -2,6 +2,7 @@ import time
 import collections
 import sys
 import traceback
+import os
 
 from functools import partial
 # TODO add in requirements.txt
@@ -29,8 +30,13 @@ class TestMaterializedViews(Tester):
     def prepare(self, user_table=False, rf=1, options={}):
         cluster = self.cluster
         cluster.populate([3, 0])
+
         if options:
             cluster.set_configuration_options(values=options)
+
+        for node in cluster.nodelist():
+            node.set_configuration_options(values={'hints_directory': os.path.join(node.get_path(), 'data', 'hints')})
+
         cluster.start()
         node1 = cluster.nodelist()[0]
 
@@ -1037,7 +1043,12 @@ class TestMaterializedViewsConsistency(Tester):
 
     def prepare(self, user_table=False):
         cluster = self.cluster
-        cluster.populate(3).start()
+        cluster.populate(3)
+
+        for node in cluster.nodelist():
+            node.set_configuration_options(values={'hints_directory': os.path.join(node.get_path(), 'data', 'hints')})
+
+        cluster.start()
         node2 = cluster.nodelist()[1]
 
         # Keep the status of async requests
