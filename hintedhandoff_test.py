@@ -25,11 +25,15 @@ class TestHintedHandoffConfig(Tester):
             cluster.set_configuration_options(values=config_options)
 
         if DISABLE_VNODES:
-            cluster.populate([2]).start()
+            cluster.populate([2])
         else:
             tokens = cluster.balanced_tokens(2)
-            cluster.populate([2], tokens=tokens).start()
+            cluster.populate([2], tokens=tokens)
 
+        for node in cluster.nodelist():
+            node.set_configuration_options(values={'hints_directory': os.path.join(node.get_path(), 'data', 'hints')})
+
+        cluster.start()
         return cluster.nodelist()
 
     def _launch_nodetool_cmd(self, node, cmd):
