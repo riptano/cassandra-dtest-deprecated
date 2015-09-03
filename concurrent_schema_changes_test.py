@@ -3,6 +3,7 @@ import os
 import pprint
 import re
 import time
+from flaky import flaky
 from random import randrange
 from threading import Thread
 
@@ -125,9 +126,11 @@ class TestConcurrentSchemaChanges(Tester):
         num_schemas = len(re.findall('\[.*?\]', schemas))
         assert num_schemas == 1, "There were multiple schema versions: " + pprint.pformat(schemas)
 
+    @flaky(max_runs=2)
     def create_lots_of_tables_concurrently_test(self):
         """
         create tables across multiple threads concurrently
+        these concurrent schema modification tests are known flappers -- should be un-flaky-d with CASSANDRA-9424 & CASSANDRA-10250
         """
         cluster = self.cluster
         cluster.populate(3).start()
@@ -153,9 +156,11 @@ class TestConcurrentSchemaChanges(Tester):
         self.validate_schema_consistent(node2)
         self.validate_schema_consistent(node3)
 
+    @flaky(max_runs=2)
     def create_lots_of_alters_concurrently_test(self):
         """
         create alters across multiple threads concurrently
+        these concurrent schema modification tests are known flappers -- should be un-flaky-d with CASSANDRA-9424 & CASSANDRA-10250
         """
         cluster = self.cluster
         cluster.populate(3).start()
@@ -189,9 +194,11 @@ class TestConcurrentSchemaChanges(Tester):
         self.validate_schema_consistent(node2)
         self.validate_schema_consistent(node3)
 
+    @flaky(max_runs=2)
     def create_lots_of_indexes_concurrently_test(self):
         """
         create indexes across multiple threads concurrently
+        these concurrent schema modification tests are known flappers -- should be un-flaky-d with CASSANDRA-9424 & CASSANDRA-10250
         """
         cluster = self.cluster
         cluster.populate(2).start()
@@ -239,9 +246,11 @@ class TestConcurrentSchemaChanges(Tester):
                 self.assertEqual(1, len(session.execute("select * from base_{0} where c2 = {1}".format(n, ins))))
 
     @since('3.0')
+    @flaky(max_runs=2)
     def create_lots_of_mv_concurrently_test(self):
         """
         create materialized views across multiple threads concurrently
+        these concurrent schema modification tests are known flappers -- should be un-flaky-d with CASSANDRA-9424 & CASSANDRA-10250
         """
         cluster = self.cluster
         cluster.populate(3).start()
@@ -316,9 +325,11 @@ class TestConcurrentSchemaChanges(Tester):
 
         self.assertTrue(0 == len(errors), "\n".join(errors))
 
+    @flaky(max_runs=2)
     def create_lots_of_schema_churn_test(self):
         """
         create tables, indexes, alters across multiple threads concurrently
+        these concurrent schema modification tests are known flappers -- should be un-flaky-d with CASSANDRA-9424 & CASSANDRA-10250
         """
         cluster = self.cluster
         cluster.populate(3).start()
@@ -332,9 +343,11 @@ class TestConcurrentSchemaChanges(Tester):
         wait(60)
         self._verify_lots_of_schema_actions(session)
 
+    @flaky(max_runs=2)
     def create_lots_of_schema_churn_with_node_down_test(self):
         """
         create tables, indexes, alters across multiple threads concurrently with a node down
+        these concurrent schema modification tests are known flappers -- should be un-flaky-d with CASSANDRA-9424 & CASSANDRA-10250
         """
         cluster = self.cluster
         cluster.populate(3).start()
