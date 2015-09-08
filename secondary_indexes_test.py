@@ -312,21 +312,22 @@ class TestSecondaryIndexes(Tester):
 
             for event_source, min_matches, max_matches in expected_matches:
                 if match_counts[event_source] < min_matches or match_counts[event_source] > max_matches:
-                    debug(match_counts)
-                    self.fail("Expected to find between %s and %s trace events matching %s from %s, but actually found %s"
-                              % (min_matches, max_matches, regex, event_source, match_counts[event_source]))
+                    self.fail("Expected to find between %s and %s trace events matching %s from %s, "
+                              "but actually found %s. (Full counts: %s)"
+                              % (min_matches, max_matches, regex, event_source,
+                                 match_counts[event_source], match_counts))
 
         query = SimpleStatement("SELECT * FROM ks.cf WHERE b='1';")
         result = session.execute(query, trace=True)
         self.assertEqual(3, len(result))
         # node2 is the coordinator for the query
         check_trace_events(query.trace,
-                           "Index mean cardinalities are cf.b_index:[0-9]*. Scanning with cf.b_index.",
+                           "Index mean cardinalities are b_index:[0-9]*. Scanning with b_index.",
                            [("127.0.0.1", 0, 0), ("127.0.0.2", 1, 1), ("127.0.0.3", 0, 0)])
         # check that the index is used on each node, really we only care that the matching
         # message appears on every node, so the max count is not important
         check_trace_events(query.trace,
-                           "Executing read on ks.cf using index cf.b_index",
+                           "Executing read on ks.cf using index b_index",
                            [("127.0.0.1", 1, 200), ("127.0.0.2", 1, 200), ("127.0.0.3", 1, 200)])
 
 class TestSecondaryIndexesOnCollections(Tester):
