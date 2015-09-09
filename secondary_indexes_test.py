@@ -56,8 +56,7 @@ class TestSecondaryIndexes(Tester):
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
 
-        conn = self.patient_cql_connection(node1)
-        session = conn
+        session = self.patient_cql_connection(node1)
         session.max_trace_wait = 120
         session.execute("CREATE KEYSPACE ks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': '1'};")
         session.execute("CREATE TABLE ks.cf (a text PRIMARY KEY, b text);")
@@ -265,7 +264,6 @@ class TestSecondaryIndexes(Tester):
             time.sleep(0.10)
             self.wait_for_schema_agreement(session)
 
-
     @since('3.0')
     def test_only_coordinator_chooses_index_for_query(self):
         """
@@ -276,8 +274,7 @@ class TestSecondaryIndexes(Tester):
         cluster = self.cluster
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
-        conn = self.patient_cql_connection(node1)
-        session = conn
+        session = self.patient_cql_connection(node1)
         session.max_trace_wait = 120
         session.execute("CREATE KEYSPACE ks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': '1'};")
         session.execute("CREATE TABLE ks.cf (a text PRIMARY KEY, b text);")
@@ -286,7 +283,8 @@ class TestSecondaryIndexes(Tester):
         for i in range(num_rows):
             indexed_value = i % (num_rows / 3)
             # use the same indexed value three times
-            session.execute("INSERT INTO ks.cf (a, b) VALUES ('%d', '%d');" % (i, indexed_value))
+            session.execute("INSERT INTO ks.cf (a, b) VALUES ('{a}', '{b}');"
+                            .format(a=i, b=indexed_value))
 
         cluster.flush()
 
@@ -312,10 +310,10 @@ class TestSecondaryIndexes(Tester):
 
             for event_source, min_matches, max_matches in expected_matches:
                 if match_counts[event_source] < min_matches or match_counts[event_source] > max_matches:
-                    self.fail("Expected to find between %s and %s trace events matching %s from %s, "
-                              "but actually found %s. (Full counts: %s)"
-                              % (min_matches, max_matches, regex, event_source,
-                                 match_counts[event_source], match_counts))
+                    self.fail("Expected to find between {min} and {max} trace events matching {pattern} from {source}, "
+                              "but actually found {actual}. (Full counts: {all})"
+                              .format(min=min_matches, max=max_matches, pattern=regex, source=event_source,
+                                      actual=match_counts[event_source], all=match_counts))
 
         query = SimpleStatement("SELECT * FROM ks.cf WHERE b='1';")
         result = session.execute(query, trace=True)
@@ -329,6 +327,7 @@ class TestSecondaryIndexes(Tester):
         check_trace_events(query.trace,
                            "Executing read on ks.cf using index b_index",
                            [("127.0.0.1", 1, 200), ("127.0.0.2", 1, 200), ("127.0.0.3", 1, 200)])
+
 
 class TestSecondaryIndexesOnCollections(Tester):
     def __init__(self, *args, **kwargs):
