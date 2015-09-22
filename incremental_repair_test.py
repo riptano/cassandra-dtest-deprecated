@@ -64,11 +64,13 @@ class TestIncRepair(Tester):
 
         session = self.patient_cql_connection(node1)
         self.create_ks(session, 'ks', 3)
-        self.create_cf(session, 'cf', read_repair=0.0, columns={'c1': 'text', 'c2': 'text'})
+        self.create_cf(session, 'cf', read_repair=0.0,
+                       columns={'c1': 'text', 'c2': 'text'})
 
         debug("insert data")
 
-        insert_c1c2(session, keys=range(1, 50), consistency=ConsistencyLevel.ALL)
+        insert_c1c2(session, keys=range(1, 50),
+                    consistency=ConsistencyLevel.ALL)
         node1.flush()
 
         debug("bringing down node 3")
@@ -76,7 +78,8 @@ class TestIncRepair(Tester):
         node3.stop(gently=False)
 
         debug("inserting additional data into node 1 and 2")
-        insert_c1c2(session, keys=range(50, 100), consistency=ConsistencyLevel.TWO)
+        insert_c1c2(session, keys=range(50, 100),
+                    consistency=ConsistencyLevel.TWO)
         node1.flush()
         node2.flush()
 
@@ -92,7 +95,8 @@ class TestIncRepair(Tester):
         node2.stop(gently=False)
 
         debug("inserting data in nodes 1 and 3")
-        insert_c1c2(session, keys=range(100, 150), consistency=ConsistencyLevel.TWO)
+        insert_c1c2(session, keys=range(100, 150),
+                    consistency=ConsistencyLevel.TWO)
         node1.flush()
         node3.flush()
 
@@ -106,7 +110,8 @@ class TestIncRepair(Tester):
 
         debug("replace node and check data integrity")
         node3.stop(gently=False)
-        node5 = Node('node5', cluster, True, ('127.0.0.5', 9160), ('127.0.0.5', 7000), '7500', '0', None, ('127.0.0.5', 9042))
+        node5 = Node('node5', cluster, True, ('127.0.0.5', 9160),
+                     ('127.0.0.5', 7000), '7500', '0', None, ('127.0.0.5', 9042))
         cluster.add(node5, False)
         node5.start(replace_address='127.0.0.3', wait_other_notice=True)
 
@@ -183,7 +188,8 @@ class TestIncRepair(Tester):
         node3.stop()
 
         for x in range(0, 100):
-            session.execute("insert into tab(key,val) values(" + str(x) + ",0)")
+            session.execute(
+                "insert into tab(key,val) values(" + str(x) + ",0)")
         node1.flush()
 
         node3.start(wait_for_binary_proto=True)
@@ -193,7 +199,8 @@ class TestIncRepair(Tester):
         else:
             node3.nodetool("repair -par -inc")
         for x in range(0, 150):
-            session.execute("insert into tab(key,val) values(" + str(x) + ",1)")
+            session.execute(
+                "insert into tab(key,val) values(" + str(x) + ",1)")
         node1.flush()
         node2.flush()
         node3.flush()
@@ -201,7 +208,8 @@ class TestIncRepair(Tester):
         node3.nodetool('compact')
 
         for x in range(0, 150):
-            assert_one(session, "select val from tab where key =" + str(x), [1])
+            assert_one(
+                session, "select val from tab where key =" + str(x), [1])
 
     @since('2.1')
     @attr('long')
@@ -217,7 +225,8 @@ class TestIncRepair(Tester):
         [node1, node2, node3] = cluster.nodelist()
 
         debug("Inserting data with stress")
-        node1.stress(['write', 'n=5M', '-rate', 'threads=10', '-schema', 'replication(factor=3)'])
+        node1.stress(['write', 'n=5M', '-rate', 'threads=10',
+                      '-schema', 'replication(factor=3)'])
 
         debug("Flushing nodes")
         cluster.flush()
@@ -255,10 +264,60 @@ class TestIncRepair(Tester):
         debug("Waiting for load size info to be propagated between nodes")
         time.sleep(45)
 
-        load_size_in_kb = float(sum(map(lambda n: n.data_size(), [node1, node2, node3])))
+        load_size_in_kb = float(
+            sum(map(lambda n: n.data_size(), [node1, node2, node3])))
         load_size = load_size_in_kb / 1024 / 1024
         debug("Total Load size: {}GB".format(load_size))
 
         # There is still some overhead, but it's lot better. We tolerate 25%.
         expected_load_size = 4.5  # In GB
         assert_almost_equal(load_size, expected_load_size, error=0.25)
+
+    @since('2.1')
+    def sstable_marking_test_not_intersecting_all_ranges(self):
+        """
+        @jira_ticket CASSANDRA-10299
+        """
+        cluster = self.cluster
+        cluster.populate(4, use_vnodes=True).start()
+        [node1, node2, node3, node4] = cluster.nodelist()
+
+        debug("Inserting data with stress")
+        node1.stress(['write', 'n=3', '-rate', 'threads=1',
+                      '-schema', 'replication(factor=3)'])
+
+        debug("Flushing nodes")
+        cluster.flush()
+
+        if self.cluster.version() >= '2.2':
+            debug("Repairing node 1")
+            node1.nodetool("repair")
+            debug("Repairing node 2")
+            node2.nodetool("repair")
+            debug("Repairing node 3")
+            node3.nodetool("repair")
+            debug("Repairing node 4")
+            node4.nodetool("repair")
+
+        else:
+            debug("Repairing node 1")
+            node1.nodetool("repair -inc -par")
+            debug("Repairing node 2")
+            node2.nodetool("repair -inc -par")
+            debug("Repairing node 3")
+            node3.nodetool("repair -inc -par")
+            debug("Repairing node 4")
+            node4.nodetool("repair -inc -par")
+
+        with open("final.txt", "w") as h:
+            node1.run_sstablemetadata(output_file=h, keyspace='keyspace1')
+            node2.run_sstablemetadata(output_file=h, keyspace='keyspace1')
+            node3.run_sstablemetadata(output_file=h, keyspace='keyspace1')
+            node4.run_sstablemetadata(output_file=h, keyspace='keyspace1')
+
+        with open("final.txt", "r") as r:
+            output = r.read()
+
+        self.assertNotIn('Repaired at: 0', output)
+
+        os.remove('final.txt')
