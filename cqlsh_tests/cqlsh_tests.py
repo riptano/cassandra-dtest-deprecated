@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import unittest
 from decimal import Decimal
 from distutils.version import LooseVersion
 from tempfile import NamedTemporaryFile
@@ -1382,6 +1383,7 @@ Unlogged batch covering 2 partitions detected against table [client_warnings.tes
         self.assertEqual(select_out, reloaded_select_out)
 
     @since('3.0')
+    @unittest.skipIf(sys.platform == "win32", 'We do not expect CLEAR to work on Windows')
     def test_clear(self):
         """
         Test the CLEAR command
@@ -1390,6 +1392,7 @@ Unlogged batch covering 2 partitions detected against table [client_warnings.tes
         self._test_clear_screen('CLEAR')
 
     @since('3.0')
+    @unittest.skipIf(sys.platform == "win32", 'We do not expect cls to work on Windows')
     def test_cls(self):
         """
         Test the CLS command
