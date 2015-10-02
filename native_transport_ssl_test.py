@@ -3,6 +3,7 @@ from dtest import Tester
 from cassandra import ConsistencyLevel
 from cassandra.cluster import NoHostAvailable
 from tools import generate_ssl_stores, putget
+from ccmlib.common import is_win
 
 
 class NativeTransportSSL(Tester):
@@ -28,8 +29,9 @@ class NativeTransportSSL(Tester):
         except NoHostAvailable:
             pass
 
-        assert len(node1.grep_log("^io.netty.handler.ssl.NotSslRecordException.*")) > 0, \
-            "Missing SSL handshake exception while connecting with non-SSL enabled client"
+        if not is_win():
+            assert len(node1.grep_log("^io.netty.handler.ssl.NotSslRecordException.*")) > 0, \
+                "Missing SSL handshake exception while connecting with non-SSL enabled client"
 
         # enabled ssl on the client and try again (this should work)
         session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.test_path, 'ccm_node.cer')})
