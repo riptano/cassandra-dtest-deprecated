@@ -73,7 +73,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        self.assertEquals(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        self.assertTrue(len(warning) > 0, "Cannot find the gc_grace_seconds warning message.")
 
     @since('3.0')
     def logged_batch_gcgs_below_threshold_multi_table_test(self):
@@ -100,7 +100,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        self.assertEquals(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        self.assertTrue(len(warning) > 0, "Cannot find the gc_grace_seconds warning message.")
 
     @since('3.0')
     def unlogged_batch_gcgs_below_threshold_should_not_print_warning_test(self):

@@ -71,7 +71,7 @@ class TestCompression(TestHelper):
         assert_crc_check_chance_equal(session, "compression_opts_table", 0.25)
 
         warn = node.grep_log("The option crc_check_chance was deprecated as a compression option.")
-        self.assertEqual(len(warn), 0)
+        self.assertEquals(0, len(warn))
         session.execute("""
             alter table compression_opts_table
                 WITH compression = {
@@ -81,7 +81,7 @@ class TestCompression(TestHelper):
                 }
             """)
         warn = node.grep_log("The option crc_check_chance was deprecated as a compression option.")
-        self.assertEqual(len(warn), 1)
+        self.assertTrue(len(warn) > 0)
 
         # check metadata again after crc_check_chance_update
         session.cluster.refresh_schema_metadata()
