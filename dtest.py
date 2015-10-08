@@ -363,28 +363,35 @@ class Tester(TestCase):
         return protocol_version
 
     def cql_connection(self, node, keyspace=None, user=None,
-                       password=None, compression=True, protocol_version=None, port=None, ssl_opts=None):
+                       password=None, compression=True, protocol_version=None,
+                       port=None, ssl_opts=None, connect_timeout=None):
 
         return self._create_session(node, keyspace, user, password, compression,
-                                    protocol_version, port=port, ssl_opts=ssl_opts)
+                                    protocol_version, port=port, ssl_opts=ssl_opts,
+                                    connect_timeout=connect_timeout)
 
     def exclusive_cql_connection(self, node, keyspace=None, user=None,
-                                 password=None, compression=True, protocol_version=None, port=None, ssl_opts=None):
+                                 password=None, compression=True, protocol_version=None,
+                                 port=None, ssl_opts=None, connect_timeout=None):
 
         node_ip = self.get_ip_from_node(node)
         wlrr = WhiteListRoundRobinPolicy([node_ip])
 
         return self._create_session(node, keyspace, user, password, compression,
-                                    protocol_version, wlrr, port=port, ssl_opts=ssl_opts)
+                                    protocol_version, wlrr, port=port, ssl_opts=ssl_opts,
+                                    connect_timeout=connect_timeout)
 
     def _create_session(self, node, keyspace, user, password, compression, protocol_version, load_balancing_policy=None,
-                        port=None, ssl_opts=None):
+                        port=None, ssl_opts=None, connect_timeout=None):
         node_ip = self.get_ip_from_node(node)
         if not port:
             port = self.get_port_from_node(node)
 
         if protocol_version is None:
             protocol_version = self.get_eager_protocol_version(self.cluster.version())
+
+        if connect_timeout is None:
+            connect_timeout = 10
 
         if user is not None:
             auth_provider = self.get_auth_provider(user=user, password=password)
@@ -393,7 +400,7 @@ class Tester(TestCase):
 
         cluster = PyCluster([node_ip], auth_provider=auth_provider, compression=compression,
                             protocol_version=protocol_version, load_balancing_policy=load_balancing_policy, default_retry_policy=FlakyRetryPolicy(),
-                            port=port, ssl_options=ssl_opts)
+                            port=port, ssl_options=ssl_opts, connect_timeout=connect_timeout)
         session = cluster.connect()
 
         # temporarily increase client-side timeout to 1m to determine
@@ -408,7 +415,8 @@ class Tester(TestCase):
 
     def patient_cql_connection(self, node, keyspace=None,
                                user=None, password=None, timeout=10, compression=True,
-                               protocol_version=None, port=None, ssl_opts=None):
+                               protocol_version=None, port=None, ssl_opts=None,
+                               connect_timeout=None):
         """
         Returns a connection after it stops throwing NoHostAvailables due to not being ready.
 
@@ -428,12 +436,14 @@ class Tester(TestCase):
             protocol_version=protocol_version,
             port=port,
             ssl_opts=ssl_opts,
-            bypassed_exception=NoHostAvailable
+            bypassed_exception=NoHostAvailable,
+            connect_timeout=connect_timeout
         )
 
     def patient_exclusive_cql_connection(self, node, keyspace=None,
                                          user=None, password=None, timeout=10, compression=True,
-                                         protocol_version=None, port=None, ssl_opts=None):
+                                         protocol_version=None, port=None, ssl_opts=None,
+                                         connect_timeout=None):
         """
         Returns a connection after it stops throwing NoHostAvailables due to not being ready.
 
@@ -453,7 +463,8 @@ class Tester(TestCase):
             protocol_version=protocol_version,
             port=port,
             ssl_opts=ssl_opts,
-            bypassed_exception=NoHostAvailable
+            bypassed_exception=NoHostAvailable,
+            connect_timeout=connect_timeout
         )
 
     def create_ks(self, session, name, rf):
