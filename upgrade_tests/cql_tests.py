@@ -423,9 +423,15 @@ class TestCQL(UpgradeTester):
             res = cursor.execute("SELECT * FROM clicks LIMIT 4")
             assert len(res) == 4, res
 
-    def counters_test(self):
+    def counters_rf1_one_test(self):
+        self.test_counters(1, ConsistencyLevel.ONE)
+
+    def counters_rf2_all_test(self):
+        self.test_counters(1, ConsistencyLevel.ALL)
+
+    def test_counters(self, rf, cl):
         """ Validate counter support """
-        cursor = self.prepare()
+        cursor = self.prepare(rf=rf)
 
         cursor.execute("""
             CREATE TABLE clicks (
@@ -440,20 +446,20 @@ class TestCQL(UpgradeTester):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
             cursor.execute("TRUNCATE clicks")
 
-            cursor.execute("UPDATE clicks SET total = total + 1 WHERE userid = 1 AND url = 'http://foo.com'")
-            res = cursor.execute("SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'")
+            cursor.execute(SimpleStatement("""UPDATE clicks SET total = total + 1 WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
+            res = cursor.execute(SimpleStatement("""SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
             assert rows_to_list(res) == [[1]], res
 
-            cursor.execute("UPDATE clicks SET total = total - 4 WHERE userid = 1 AND url = 'http://foo.com'")
-            res = cursor.execute("SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'")
+            cursor.execute(SimpleStatement("""UPDATE clicks SET total = total - 4 WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
+            res = cursor.execute(SimpleStatement("""SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
             assert rows_to_list(res) == [[-3]], res
 
-            cursor.execute("UPDATE clicks SET total = total+1 WHERE userid = 1 AND url = 'http://foo.com'")
-            res = cursor.execute("SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'")
+            cursor.execute(SimpleStatement("""UPDATE clicks SET total = total + 1 WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
+            res = cursor.execute(SimpleStatement("""SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
             assert rows_to_list(res) == [[-2]], res
 
-            cursor.execute("UPDATE clicks SET total = total -2 WHERE userid = 1 AND url = 'http://foo.com'")
-            res = cursor.execute("SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'")
+            cursor.execute(SimpleStatement("""UPDATE clicks SET total = total -2 WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
+            res = cursor.execute(SimpleStatement("""SELECT total FROM clicks WHERE userid = 1 AND url = 'http://foo.com'""", consistency_level=cl))
             assert rows_to_list(res) == [[-4]], res
 
     def indexed_with_eq_test(self):
