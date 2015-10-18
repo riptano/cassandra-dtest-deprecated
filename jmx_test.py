@@ -3,7 +3,7 @@ import unittest
 
 from dtest import Tester, debug
 from jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
-from tools import since
+from tools import since, require
 
 
 class TestJMX(Tester):
@@ -124,3 +124,32 @@ class TestJMX(Tester):
 
             sstables = jmx.read_attribute(sstable_count, "Value")
             self.assertGreaterEqual(int(sstables), 1)
+
+    @since('2.2')
+    @require(9526)
+    def phi_test(self):
+        """
+        Check functioning of nodetool failuredetector.
+        @jira_ticket CASSANDRA-9526
+        """
+
+        cluster = self.cluster
+        cluster.populate(3).start(wait_for_binary_proto=True)
+        node1, node2, node3 = cluster.nodelist()
+
+        phivalues = node1.nodetool("failuredetector")[0].splitlines()
+        endpoint1Values = phivalues[1].split()
+        endpoint2Values = phivalues[2].split()
+
+        endpoint1 = endpoint1Values[0][1:-1]
+        endpoint2 = endpoint2Values[0][1:-1]
+
+        self.assertTrue(endpoint1.startswith("127.0.0"))
+        self.assertTrue(endpoint2.startswith("127.0.0"))
+
+        endpoint1Phi = float(endpoint1Values[1])
+        endpoint2Phi = float(endpoint2Values[1])
+
+        max_phi = 2.0
+        self.assertTrue(endpoint1Phi > 0.0 and endpoint1Phi < 2.0)
+        self.assertTrue(endpoint2Phi > 0.0 and endpoint2Phi < 2.0)
