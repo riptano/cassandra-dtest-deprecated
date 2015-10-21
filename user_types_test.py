@@ -770,3 +770,25 @@ class TestUserTypes(Tester):
             "CREATE TABLE t (id int PRIMARY KEY, v frozen<user_types.udt>)",
             "Statement on keyspace user_ks cannot refer to a user type in keyspace user_types"
         )
+
+    def test_quoted_subfield_names(self):
+        """
+        Ensure that a UDT with quoted field names can be accessed using the python driver
+        @jira_ticket CASSANDRA-10390
+        """
+
+        cluster = self.cluster
+        cluster.populate(1).start()
+        session = self.patient_cql_connection(cluster.nodelist()[0])
+        self.create_ks(session, 'ks', 1)
+
+        session.execute("""CREATE TYPE ks.test_type ("test.field" int)""")
+        session.execute("""CREATE TABLE ks.test_table (pk int primary key, test_field frozen<test_type>)""")
+        session.execute("""INSERT INTO ks.test_table (pk, test_field) VALUES (0, {"test.field": 1})""")
+        rows = session.execute("SELECT * FROM ks.test_table WHERE pk=0")
+        pk, test_field = rows[0]
+        self.assertEqual(0, pk)
+        self.assertEqual(1, test_field[0])
+        # because the real name of the subfield is not valid for use
+        # in a named tuple, a generated name is used in its place
+        self.assertEqual(1, test_field.field_0_)
