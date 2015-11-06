@@ -408,7 +408,7 @@ class TestMutations(ThriftTester):
             assert dict((c.name, c.value) for c in cas_result.current_values) == {first_columns[0].name: first_columns[0].value}, cas_result
 
             # CL.SERIAL for reads
-            # assert client.get('key1', ColumnPath(column_family, column=first_columns[0].name), ConsistencyLevel.SERIAL).column.value == first_columns[0].value
+            assert client.get('key1', ColumnPath(column_family, column=first_columns[0].name), ConsistencyLevel.SERIAL).column.value == first_columns[0].value
 
             # cas first_columns -> second_columns should succeed
             assert cas(first_columns, second_columns, column_family).success
