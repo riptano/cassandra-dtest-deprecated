@@ -12,17 +12,19 @@ KeyspaceName = 'keyspace1'
 TableName = 'standard1'
 
 
+def _remove_prefix(string, prefix):
+    assert string.startswith(prefix), '{p} not a prefix of {s}'.format(p=prefix, s=string)
+    suffix = string[len(prefix):]
+    assert string.endswith(suffix), '{u} not a prefix of {t}'.format(u=suffix, t=string)
+    assert len(suffix) + len(prefix) == len(string)
+    return suffix
+
+
 def _strip_common_prefix(strings):
     strings = list(map(os.path.normcase, strings))
     common_prefix = os.path.commonprefix(strings)
-    rvs = []
-    for s in strings:
-        stripped = s.lstrip(common_prefix)
-        if s:
-            assert stripped
-        rvs.append(stripped)
 
-    return rvs
+    return [_remove_prefix(string, common_prefix) for string in strings]
 
 
 @since('3.0')
@@ -141,12 +143,13 @@ class SSTableUtilTest(Tester):
 
         self.assertEqual(expected_finalfiles, finalfiles)
 
-        if len(expected_tmpfiles) == 0:
-            expected_tmpfiles = sorted(list(set(allfiles) - set(finalfiles)))
-
         debug("Comparing tmp files...")
         tmpfiles = self._invoke_sstableutil(ks, table, type='tmp')
-        self.assertEqual(expected_tmpfiles, tmpfiles)
+
+        common_prefix = os.path.commonprefix(list(tmpfiles) + list(expected_tmpfiles))
+
+        self.assertEqual([_remove_prefix(s, common_prefix) for s in tmpfiles],
+                         [_remove_prefix(s, common_prefix) for s in expected_tmpfiles])
 
         debug("Comparing op logs...")
         expectedoplogs = sorted(self._get_sstable_transaction_logs(node, ks, table))
