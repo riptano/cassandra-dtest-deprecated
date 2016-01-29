@@ -16,7 +16,7 @@ from cassandra.query import SimpleStatement
 from nose.plugins.attrib import attr
 
 from ccmlib.node import Node
-from dtest import CASSANDRA_DIR, DISABLE_VNODES, IGNORE_REQUIRE, debug
+from dtest import CASSANDRA_DIR, DISABLE_VNODES, IGNORE_REQUIRE, OFFHEAP_MEMTABLES, debug
 
 
 def rows_to_list(rows):
@@ -263,6 +263,9 @@ def no_vnodes():
     """Skips the decorated test or test class if using vnodes."""
     return unittest.skipIf(not DISABLE_VNODES, 'Test disabled for vnodes')
 
+def no_offheap():
+    """Skips the decorated test or test class if using offheap memtables."""
+    return unittest.skipIf(OFFHEAP_MEMTABLES, 'Test disabled for offheap memtables')
 
 def require(require_pattern, broken_in=None):
     """Skips the decorated class or method, unless the argument
