@@ -416,7 +416,7 @@ class TestSecondaryIndexes(Tester):
     def test_query_indexes_with_vnodes(self):
         """
         Verifies correct query behaviour in the presence of vnodes
-        @jira_ticket
+        @jira_ticket CASSANDRA-11104
         """
         cluster = self.cluster
         cluster.populate(2, use_vnodes=True).start()
