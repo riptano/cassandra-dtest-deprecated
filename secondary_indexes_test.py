@@ -434,9 +434,9 @@ class TestSecondaryIndexes(Tester):
             session.execute("INSERT INTO ks.regular_table (a, b) VALUES ({a}, {b})".format(a=i, b=val))
 
         res = session.execute("SELECT * FROM ks.compact_table WHERE b = 0")
-        assert len(rows_to_list(res)) == 50
+        self.assertEqual(len(rows_to_list(res)), 50)
         res = session.execute("SELECT * FROM ks.regular_table WHERE b = 0")
-        assert len(rows_to_list(res)) == 50
+        self.assertEqual(len(rows_to_list(res)), 50)
 
 
 class TestSecondaryIndexesOnCollections(Tester):
