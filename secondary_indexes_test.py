@@ -8,7 +8,7 @@ from dtest import Tester, debug
 from tools import known_failure, since, rows_to_list
 from assertions import assert_invalid, assert_one
 from cassandra import InvalidRequest
-from cassandra.concurrent import execute_concurrent
+from cassandra.concurrent import execute_concurrent, execute_concurrent_with_args
 from cassandra.query import BatchStatement, SimpleStatement
 from cassandra.protocol import ConfigurationException
 
@@ -428,10 +428,13 @@ class TestSecondaryIndexes(Tester):
         session.execute("CREATE TABLE ks.regular_table (a int PRIMARY KEY, b int)")
         session.execute("CREATE INDEX composites_index on ks.regular_table (b)")
 
-        for i in xrange(100):
-            val = i % 2
-            session.execute("INSERT INTO ks.compact_table (a, b) VALUES ({a}, {b})".format(a=i, b=val))
-            session.execute("INSERT INTO ks.regular_table (a, b) VALUES ({a}, {b})".format(a=i, b=val))
+        insert_args = [(i, i % 2) for i in xrange(100)]
+        execute_concurrent_with_args(session,
+                                     session.prepare("INSERT INTO ks.compact_table (a, b) VALUES (?, ?)"),
+                                     insert_args)
+        execute_concurrent_with_args(session,
+                                     session.prepare("INSERT INTO ks.regular_table (a, b) VALUES (?, ?)"),
+                                     insert_args)
 
         res = session.execute("SELECT * FROM ks.compact_table WHERE b = 0")
         self.assertEqual(len(rows_to_list(res)), 50)
