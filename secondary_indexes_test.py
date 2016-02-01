@@ -5,7 +5,7 @@ import time
 import uuid
 
 from dtest import Tester, debug
-from tools import known_failure, since
+from tools import known_failure, since, rows_to_list
 from assertions import assert_invalid, assert_one
 from cassandra import InvalidRequest
 from cassandra.concurrent import execute_concurrent
@@ -412,6 +412,31 @@ class TestSecondaryIndexes(Tester):
         check_trace_events(trace,
                            "Executing read on ks.cf using index b_index",
                            [("127.0.0.1", 1, 200), ("127.0.0.2", 1, 200), ("127.0.0.3", 1, 200)])
+
+    def test_query_indexes_with_vnodes(self):
+        """
+        Verifies correct query behaviour in the presence of vnodes
+        @jira_ticket
+        """
+        cluster = self.cluster
+        cluster.populate(2, use_vnodes=True).start()
+        node1, node2 = cluster.nodelist()
+        session = self.patient_cql_connection(node1)
+        session.execute("CREATE KEYSPACE ks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': '1'};")
+        session.execute("CREATE TABLE ks.compact_table (a int PRIMARY KEY, b int) WITH COMPACT STORAGE;")
+        session.execute("CREATE INDEX keys_index ON ks.compact_table (b);")
+        session.execute("CREATE TABLE ks.regular_table (a int PRIMARY KEY, b int)")
+        session.execute("CREATE INDEX composites_index on ks.regular_table (b)")
+
+        for i in xrange(100):
+            val = i % 2
+            session.execute("INSERT INTO ks.compact_table (a, b) VALUES ({a}, {b})".format(a=i, b=val))
+            session.execute("INSERT INTO ks.regular_table (a, b) VALUES ({a}, {b})".format(a=i, b=val))
+
+        res = session.execute("SELECT * FROM ks.compact_table WHERE b = 0")
+        assert len(rows_to_list(res)) == 50
+        res = session.execute("SELECT * FROM ks.regular_table WHERE b = 0")
+        assert len(rows_to_list(res)) == 50
 
 
 class TestSecondaryIndexesOnCollections(Tester):
