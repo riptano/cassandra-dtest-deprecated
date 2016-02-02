@@ -501,8 +501,13 @@ class UpgradeTester(Tester):
             "Current upgrade path: {}".format(
                 vers[:curr_index] + ['***' + current_tag + '***'] + vers[curr_index + 1:]))
 
+    def _safe_name(self, tag):
+        # add prefix letter so we don't break C* naming rules in the case of bare versions
+        # and make sure no ccm ':' delimiters sneak in
+        return "t{tag}".format(tag).replace(":", "_")
+
     def _create_metadata_schemas(self, tag):
-        safe_name = "t" + tag  # add a letter so we don't break C* naming rules in the case of bare versions
+        safe_name = self._safe_name(tag)
 
         self.created_metadata_versions.append((self.cluster.version(), tag))
         session = self.patient_cql_connection(self.node2)
@@ -514,7 +519,7 @@ class UpgradeTester(Tester):
             getattr(schema_metadata_test, m)(self.cluster.version(), session, safe_name)
 
     def _check_metadata_schemas(self, version, tag):
-        safe_name = "t" + tag  # mirrors the name safety convention in _create_metadata_schemas
+        safe_name = self._safe_name(tag)
 
         session = self.patient_cql_connection(self.node2)
         session.execute('use upgrade')
