@@ -1356,6 +1356,18 @@ def thread_session(ip, queue, start, end, rows, num_partitions):
 @skipIf(sys.platform == 'win32', 'Bug in python on Windows: https://bugs.python.org/issue10128')
 class TestMaterializedViewsConsistency(Tester):
 
+    def __init__(self, *args, **kwargs):
+        """
+        @jira_ticket CASSANDRA-10779
+        """
+
+        self.ignore_log_patterns = [
+            # This occurs when the materialized view can't apply mutation locally
+            # Since we test the values, we can safely ignore this error
+            r'Failed to apply mutation locally'
+        ]
+        Tester.__init__(self, *args, **kwargs)
+
     def prepare(self, user_table=False):
         cluster = self.cluster
         cluster.populate(3).start()
