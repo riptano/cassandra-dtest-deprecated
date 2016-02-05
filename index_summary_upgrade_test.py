@@ -1,11 +1,13 @@
 from cassandra.concurrent import execute_concurrent_with_args
 
 from dtest import Tester, debug
+from tools import no_offheap
 from jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 
 class TestUpgradeIndexSummary(Tester):
 
+    @no_offheap()
     def test_upgrade_index_summary(self):
         cluster = self.cluster
         cluster.populate(1)
