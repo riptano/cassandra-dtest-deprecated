@@ -528,7 +528,8 @@ class SnitchConfigurationUpdateTest(Tester):
                 for line in snitch_lines_before(i, node):
                     topo_file.write(line + os.linesep)
 
-        cluster.start(wait_for_binary_proto=True)
+        for node in cluster.nodelist():
+            node.start(wait_for_binary_proto=True)
 
         session = self.patient_cql_connection(cluster.nodelist()[0])
 
