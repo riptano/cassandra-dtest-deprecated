@@ -3716,7 +3716,7 @@ class TestCQL(UpgradeTester):
             # the starting version is >= 3.0, we only attempt it on the upgraded
             # node to avoid "duplicate index definition" errors
             if is_upgraded:
-                if self.UPGRADE_PATH.upgrade_version >= '3.0':
+                if self.get_node_version(is_upgraded) >= '3.0':
                     cursor.execute("CREATE INDEX ON test(m)")
                 else:
                     assert_invalid(cursor, "CREATE INDEX on test(m)")
