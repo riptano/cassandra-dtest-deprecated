@@ -456,7 +456,32 @@ def get_table_metadata(session, keyspace_name, table_name):
     return cluster.metadata.keyspaces[keyspace_name].tables[table_name]
 
 
-class _CurrentTableMetadata(object):
+class _UpdatingMetadataDictWrapper(object):
+    def __init__(self, parent, attr_name):
+        self._parent = parent
+        self._attr_name = attr_name
+        self._refresh()
+
+    def _refresh(self):
+        self._wrapped = getattr(self._parent.wrapped, self._attr_name)
+
+    @property
+    def wrapped(self):
+        self._refresh()
+        return self._wrapped
+
+    def __getitem__(self, idx):
+        return self.wrapped[idx]
+
+    def __getattr__(self, name):
+        return attr(self.wrapped, name)
+
+    def __iter__(self):
+        for k in self.wrapped:
+            yield k
+
+
+class _UpdatingTableMetadataWrapper(object):
     def __init__(self, cluster, ks_name, table_name):
         self._cluster = cluster
         self._ks_name = ks_name
@@ -470,26 +495,33 @@ class _CurrentTableMetadata(object):
         return getattr(self._cluster.metadata.keyspaces[self._ks_name].tables[self._table_name], name)
 
 
-class _CurrentKeyspaceMetadata(object):
+class _UpdatingKeyspaceMetadataWrapper(object):
     def __init__(self, cluster, ks_name):
         self._cluster = cluster
         self._ks_name = ks_name
+
+    @property
+    def wrapped(self):
+        self._refresh()
+        return self._cluster.metadata.keyspaces[self._ks_name]
 
     def _refresh(self):
         self._cluster.refresh_keyspace_metadata(self._ks_name)
 
     @property
     def tables(self):
-        self._refresh()
-        return {k: _CurrentTableMetadata(self._cluster, self._ks_name, k)
-                for k in self._cluster.metadata.keyspaces[self._ks_name].tables}
+        return {k: _UpdatingTableMetadataWrapper(self._cluster, self._ks_name, k)
+                for k in self.wrapped.tables}
+
+    @property
+    def user_types(self):
+        return _UpdatingMetadataDictWrapper(parent=self, attr_name='user_types')
 
     def __getattr__(self, name):
-        self._refresh()
-        return getattr(self._cluster.metadata.keyspaces[self._ks_name], name)
+        return getattr(self.wrapped, name)
 
 
-class CurrentClusterMetadata(object):
+class UpdatingClusterMetadataWrapper(object):
     """
     A class that provides an interface to a cluster's metadata that is
     refreshed on access. Currently only does so for the keyspaces attribute.
@@ -503,5 +535,5 @@ class CurrentClusterMetadata(object):
     @property
     def keyspaces(self):
         self._cluster.refresh_schema_metadata()
-        return {k: _CurrentKeyspaceMetadata(self._cluster, k)
+        return {k: _UpdatingKeyspaceMetadataWrapper(self._cluster, k)
                 for k in self._cluster.metadata.keyspaces}

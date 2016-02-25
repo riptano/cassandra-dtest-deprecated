@@ -17,7 +17,7 @@ from thrift_bindings.v22.ttypes import \
 from thrift_bindings.v22.ttypes import (CfDef, Column, ColumnOrSuperColumn,
                                         Mutation)
 from thrift_tests import get_thrift_client
-from tools import debug, rows_to_list, since, CurrentClusterMetadata
+from tools import debug, rows_to_list, since, UpdatingClusterMetadataWrapper
 
 
 class CQLTester(Tester):
@@ -79,7 +79,7 @@ class StorageProxyCQLTester(CQLTester):
         - assert keyspace is no longer in keyspace metadata
         """
         session = self.prepare(create_keyspace=False)
-        meta = CurrentClusterMetadata(session.cluster)
+        meta = UpdatingClusterMetadataWrapper(session.cluster)
 
         self.assertNotIn('ks', meta.keyspaces)
         session.execute("CREATE KEYSPACE ks WITH replication = "
@@ -118,7 +118,7 @@ class StorageProxyCQLTester(CQLTester):
         """
         session = self.prepare()
 
-        ks_meta = CurrentClusterMetadata(session.cluster).keyspaces['ks']
+        ks_meta = UpdatingClusterMetadataWrapper(session.cluster).keyspaces['ks']
 
         session.execute("CREATE TABLE test1 (k int PRIMARY KEY, v1 int)")
         self.assertIn('test1', ks_meta.tables)
@@ -169,7 +169,7 @@ class StorageProxyCQLTester(CQLTester):
         session = self.prepare()
 
         session.execute("CREATE TABLE test3 (k int PRIMARY KEY, v1 int, v2 int)")
-        table_meta = CurrentClusterMetadata(session.cluster).keyspaces['ks'].tables['test3']
+        table_meta = UpdatingClusterMetadataWrapper(session.cluster).keyspaces['ks'].tables['test3']
         session.execute("CREATE INDEX testidx ON test3 (v1)")
         self.assertIn('testidx', table_meta.indexes)
 
@@ -195,22 +195,20 @@ class StorageProxyCQLTester(CQLTester):
         # TODO is this even necessary given the existence of the auth_tests?
         """
         session = self.prepare()
-        ks_meta = CurrentClusterMetadata(session.cluster).keyspaces['ks']
+        types_meta = UpdatingClusterMetadataWrapper(session.cluster).keyspaces['ks'].user_types
 
         session.execute("CREATE TYPE address_t (street text, city text, zip_code int)")
-        self.assertIn('address_t', ks_meta.user_types)
+        self.assertIn('address_t', types_meta)
 
         session.execute("CREATE TABLE test4 (id int PRIMARY KEY, address frozen<address_t>)")
 
         session.execute("ALTER TYPE address_t ADD phones set<text>")
-        session.execute("CREATE TABLE test5 (id int PRIMARY KEY, address frozen<address_t>)")
+        self.assertIn('phones', types_meta['address_t'].field_names)
 
         session.execute("DROP TABLE test4")
-        session.execute("DROP TABLE test5")
+
         session.execute("DROP TYPE address_t")
-        assert_invalid(session,
-                       "CREATE TABLE test6 (id int PRIMARY KEY, address frozen<address_t>)",
-                       expected=InvalidRequest)
+        self.assertNotIn('address_t', types_meta)
 
     def user_test(self):
         """
