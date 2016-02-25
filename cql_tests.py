@@ -17,7 +17,7 @@ from thrift_bindings.v22.ttypes import \
 from thrift_bindings.v22.ttypes import (CfDef, Column, ColumnOrSuperColumn,
                                         Mutation)
 from thrift_tests import get_thrift_client
-from tools import debug, get_keyspace_metadata, get_schema_metadata, rows_to_list, since
+from tools import debug, rows_to_list, since, CurrentClusterMetadata
 
 
 class CQLTester(Tester):
@@ -79,25 +79,25 @@ class StorageProxyCQLTester(CQLTester):
         - assert keyspace is no longer in keyspace metadata
         """
         session = self.prepare(create_keyspace=False)
+        meta = CurrentClusterMetadata(session.cluster)
 
-        self.assertNotIn('ks', get_schema_metadata(session).keyspaces)
+        self.assertNotIn('ks', meta.keyspaces)
         session.execute("CREATE KEYSPACE ks WITH replication = "
                         "{ 'class':'SimpleStrategy', 'replication_factor':1} "
                         "AND DURABLE_WRITES = true")
-        self.assertIn('ks', get_schema_metadata(session).keyspaces)
-        ks_meta = get_keyspace_metadata(session, 'ks')
+        self.assertIn('ks', meta.keyspaces)
+        ks_meta = meta.keyspaces['ks']
         self.assertTrue(ks_meta.durable_writes)
         self.assertIsInstance(ks_meta.replication_strategy, SimpleStrategy)
 
         session.execute("ALTER KEYSPACE ks WITH replication = "
                         "{ 'class' : 'NetworkTopologyStrategy', 'dc1' : 1 } "
                         "AND DURABLE_WRITES = false")
-        ks_meta = get_keyspace_metadata(session, 'ks')
         self.assertFalse(ks_meta.durable_writes)
         self.assertIsInstance(ks_meta.replication_strategy, NetworkTopologyStrategy)
 
         session.execute("DROP KEYSPACE ks")
-        self.assertNotIn('ks', get_schema_metadata(session).keyspaces)
+        self.assertNotIn('ks', meta.keyspaces)
 
     def table_test(self):
         """
@@ -118,10 +118,17 @@ class StorageProxyCQLTester(CQLTester):
         """
         session = self.prepare()
 
+        ks_meta = CurrentClusterMetadata(session.cluster).keyspaces['ks']
+
         session.execute("CREATE TABLE test1 (k int PRIMARY KEY, v1 int)")
+        self.assertIn('test1', ks_meta.tables)
         session.execute("CREATE TABLE test2 (k int, c1 int, v1 int, PRIMARY KEY (k, c1)) WITH COMPACT STORAGE")
+        self.assertIn('test2', ks_meta.tables)
+
+        t1_meta = ks_meta.tables['test1']
 
         session.execute("ALTER TABLE test1 ADD v2 int")
+        self.assertIn('v2', t1_meta.columns)
 
         for i in range(0, 10):
             session.execute("INSERT INTO test1 (k, v1, v2) VALUES ({i}, {i}, {i})".format(i=i))
@@ -143,10 +150,9 @@ class StorageProxyCQLTester(CQLTester):
         self.assertEqual(rows_to_list(res), [])
 
         session.execute("DROP TABLE test1")
+        self.assertNotIn('test1', ks_meta.tables)
         session.execute("DROP TABLE test2")
-
-        assert_invalid(session, "SELECT * FROM test1", expected=InvalidRequest)
-        assert_invalid(session, "SELECT * FROM test2", expected=InvalidRequest)
+        self.assertNotIn('test2', ks_meta.tables)
 
     def index_test(self):
         """
@@ -163,7 +169,9 @@ class StorageProxyCQLTester(CQLTester):
         session = self.prepare()
 
         session.execute("CREATE TABLE test3 (k int PRIMARY KEY, v1 int, v2 int)")
+        table_meta = CurrentClusterMetadata(session.cluster).keyspaces['ks'].tables['test3']
         session.execute("CREATE INDEX testidx ON test3 (v1)")
+        self.assertIn('testidx', table_meta.indexes)
 
         for i in range(0, 10):
             session.execute("INSERT INTO test3 (k, v1, v2) VALUES ({i}, {i}, {i})".format(i=i))
@@ -172,8 +180,7 @@ class StorageProxyCQLTester(CQLTester):
         self.assertEqual(rows_to_list(res), [[0, 0, 0]])
 
         session.execute("DROP INDEX testidx")
-
-        assert_invalid(session, "SELECT * FROM test3 where v1 = 0", expected=InvalidRequest)
+        self.assertNotIn('testidx', table_meta.indexes)
 
     def type_test(self):
         """
@@ -188,8 +195,11 @@ class StorageProxyCQLTester(CQLTester):
         # TODO is this even necessary given the existence of the auth_tests?
         """
         session = self.prepare()
+        ks_meta = CurrentClusterMetadata(session.cluster).keyspaces['ks']
 
         session.execute("CREATE TYPE address_t (street text, city text, zip_code int)")
+        self.assertIn('address_t', ks_meta.user_types)
+
         session.execute("CREATE TABLE test4 (id int PRIMARY KEY, address frozen<address_t>)")
 
         session.execute("ALTER TYPE address_t ADD phones set<text>")

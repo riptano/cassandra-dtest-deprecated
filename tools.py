@@ -448,3 +448,60 @@ def get_schema_metadata(session):
     cluster = session.cluster
     cluster.refresh_schema_metadata()
     return cluster.metadata
+
+
+def get_table_metadata(session, keyspace_name, table_name):
+    cluster = session.cluster
+    cluster.refresh_table_metadata(keyspace_name, table_name)
+    return cluster.metadata.keyspaces[keyspace_name].tables[table_name]
+
+
+class _CurrentTableMetadata(object):
+    def __init__(self, cluster, ks_name, table_name):
+        self._cluster = cluster
+        self._ks_name = ks_name
+        self._table_name = table_name
+
+    def _refresh(self):
+        self._cluster.refresh_table_metadata(self._ks_name, self._table_name)
+
+    def __getattr__(self, name):
+        self._refresh()
+        return getattr(self._cluster.metadata.keyspaces[self._ks_name].tables[self._table_name], name)
+
+
+class _CurrentKeyspaceMetadata(object):
+    def __init__(self, cluster, ks_name):
+        self._cluster = cluster
+        self._ks_name = ks_name
+
+    def _refresh(self):
+        self._cluster.refresh_keyspace_metadata(self._ks_name)
+
+    @property
+    def tables(self):
+        self._refresh()
+        return {k: _CurrentTableMetadata(self._cluster, self._ks_name, k)
+                for k in self._cluster.metadata.keyspaces[self._ks_name].tables}
+
+    def __getattr__(self, name):
+        self._refresh()
+        return getattr(self._cluster.metadata.keyspaces[self._ks_name], name)
+
+
+class CurrentClusterMetadata(object):
+    """
+    A class that provides an interface to a cluster's metadata that is
+    refreshed on access. Currently only does so for the keyspaces attribute.
+    """
+    def __init__(self, cluster):
+        """
+        @param cluster The cassandra.cluster.Cluster object to wrap.
+        """
+        self._cluster = cluster
+
+    @property
+    def keyspaces(self):
+        self._cluster.refresh_schema_metadata()
+        return {k: _CurrentKeyspaceMetadata(self._cluster, k)
+                for k in self._cluster.metadata.keyspaces}
