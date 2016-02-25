@@ -463,21 +463,21 @@ class _UpdatingMetadataDictWrapper(object):
         self._refresh()
 
     def _refresh(self):
-        self._wrapped = getattr(self._parent.wrapped, self._attr_name)
+        self._data = getattr(self._parent._wrapped, self._attr_name)
 
     @property
-    def wrapped(self):
+    def _wrapped(self):
         self._refresh()
-        return self._wrapped
+        return self._data
 
     def __getitem__(self, idx):
-        return self.wrapped[idx]
+        return self._wrapped[idx]
 
     def __getattr__(self, name):
-        return attr(self.wrapped, name)
+        return attr(self._wrapped, name)
 
     def __iter__(self):
-        for k in self.wrapped:
+        for k in self._wrapped:
             yield k
 
 
@@ -501,7 +501,7 @@ class _UpdatingKeyspaceMetadataWrapper(object):
         self._ks_name = ks_name
 
     @property
-    def wrapped(self):
+    def _wrapped(self):
         self._refresh()
         return self._cluster.metadata.keyspaces[self._ks_name]
 
@@ -511,14 +511,14 @@ class _UpdatingKeyspaceMetadataWrapper(object):
     @property
     def tables(self):
         return {k: _UpdatingTableMetadataWrapper(self._cluster, self._ks_name, k)
-                for k in self.wrapped.tables}
+                for k in self._wrapped.tables}
 
     @property
     def user_types(self):
         return _UpdatingMetadataDictWrapper(parent=self, attr_name='user_types')
 
     def __getattr__(self, name):
-        return getattr(self.wrapped, name)
+        return getattr(self._wrapped, name)
 
 
 class UpdatingClusterMetadataWrapper(object):
