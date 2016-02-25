@@ -402,7 +402,6 @@ class MiscellaneousCQLTester(CQLTester):
         - INSERT a row via CQL
         - ALTER the name of the table via CQL
         - SELECT from the table and assert the values inserted are there
-        # TODO why doesn't this check that the column names were actually changed?
         """
         session = self.prepare(start_rpc=True)
 
