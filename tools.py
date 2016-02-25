@@ -491,9 +491,12 @@ class _UpdatingTableMetadataWrapper(object):
         self._cluster.refresh_table_metadata(self._ks_name, self._table_name)
 
     def __getattr__(self, name):
-        self._refresh()
-        return getattr(self._cluster.metadata.keyspaces[self._ks_name].tables[self._table_name], name)
+        return getattr(self._wrapped, name)
 
+    @property
+    def _wrapped(self):
+        self._refresh()
+        return self._cluster.metadata.keyspaces[self._ks_name].tables[self._table_name]
 
 class _UpdatingKeyspaceMetadataWrapper(object):
     def __init__(self, cluster, ks_name):
