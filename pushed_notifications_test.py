@@ -1,12 +1,13 @@
 import time
 from threading import Event
 
+from nose.tools import timed
+
 from assertions import assert_invalid
 from cassandra import ConsistencyLevel as CL
 from cassandra import ReadFailure
 from cassandra.query import SimpleStatement
 from dtest import Tester, debug
-from nose.tools import timed
 from tools import known_failure, no_vnodes, since
 
 
@@ -171,7 +172,7 @@ class TestPushedNotifications(Tester):
             node2.stop(wait_other_notice=True)
             node2.start(wait_other_notice=True)
             debug("Waiting for notifications from {}".format(waiter.address))
-            notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=3)
+            notifications = waiter.wait_for_notifications(timeout=90.0, num_notifications=3)
             self.assertEquals(3, len(notifications))
             for notification in notifications:
                 self.assertEquals(self.get_ip_from_node(node2), notification["address"][0])
