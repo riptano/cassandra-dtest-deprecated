@@ -1,15 +1,5 @@
-import os
-import re
-import time
-
-from assertions import assert_all, assert_invalid, assert_one
-from cassandra import AuthenticationFailed, InvalidRequest, Unauthorized
-from cassandra.cluster import NoHostAvailable
-from cassandra.protocol import SyntaxException
-from ccmlib.common import get_version_from_build
 from ccmlib.node import NodetoolError
-from dtest import Tester, debug
-from tools import since
+from dtest import Tester
 from jmxutils import apply_jmx_authentication
 
 
@@ -29,20 +19,38 @@ class TestAuth(Tester):
         [node] = self.cluster.nodelist()
         node.nodetool('-u cassandra -pw cassandra status')
 
-        try:
-            node.nodetool('-u cassandra -pw badpassword info')
-        except NodetoolError as e:
-             self.assertIn('Username and/or password are incorrect', str(e))
+        session = self.patient_cql_connection(node, user='cassandra', password='cassandra')
+        # the jmx_user role has no login privilege but give it a password anyway
+        # to demonstrate that LOGIN is required for JMX authentication
+        session.execute("CREATE ROLE jmx_user WITH LOGIN=false AND PASSWORD='321cba'")
+        session.execute("GRANT SELECT ON MBEAN 'org.apache.cassandra.net:type=FailureDetector' TO jmx_user")
+        session.execute("GRANT DESCRIBE ON ALL MBEANS TO jmx_user")
+        session.execute("CREATE ROLE test WITH LOGIN=true and PASSWORD='abc123'")
 
-        try:
-            node.nodetool('-u baduser -pw cassandra gossipinfo')
-        except NodetoolError as e:
-            self.assertIn('Username and/or password are incorrect', str(e))
+        with self.assertRaisesRegexp(NodetoolError, 'Username and/or password are incorrect'):
+            node.nodetool('-u baduser -pw abc123 gossipinfo')
+
+        with self.assertRaisesRegexp(NodetoolError, 'Username and/or password are incorrect'):
+            node.nodetool('-u test -pw badpassword gossipinfo')
+
+        # role must have LOGIN attribute
+        with self.assertRaisesRegexp(NodetoolError, 'jmx_user is not permitted to log in'):
+            node.nodetool('-u jmx_user -pw 321cba gossipinfo')
+
+        # test doesn't yet have any privileges on the necessary JMX resources
+        with self.assertRaisesRegexp(NodetoolError, 'Access Denied'):
+            node.nodetool('-u test -pw abc123 gossipinfo')
+
+        session.execute("GRANT jmx_user TO test")
+        node.nodetool('-u test -pw abc123 gossipinfo')
+
+        # superuser status applies to JMX authz too
+        node.nodetool('-u cassandra -pw cassandra gossipinfo')
 
     def prepare(self, nodes=1, permissions_validity=0):
-        config = {'authenticator' : 'org.apache.cassandra.auth.PasswordAuthenticator',
-                  'authorizer' : 'org.apache.cassandra.auth.CassandraAuthorizer',
-                  'permissions_validity_in_ms' : permissions_validity}
+        config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
+                  'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
+                  'permissions_validity_in_ms': permissions_validity}
         self.cluster.set_configuration_options(values=config)
         self.cluster.populate(nodes)
         [node] = self.cluster.nodelist()
