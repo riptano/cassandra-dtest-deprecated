@@ -50,6 +50,7 @@ def make_mbean(package, type, **kwargs):
                              for k, v in kwargs.iteritems())
     return rv
 
+
 def apply_jmx_authentication(node):
     if common.is_win():
         conf_file = os.path.join(node.get_conf_dir(), common.CASSANDRA_WIN_ENV)
@@ -60,13 +61,13 @@ def apply_jmx_authentication(node):
     replacement = 'JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=true"'
     pattern1 = 'JVM_OPTS="\$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"'
     replacement1 = '#JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"'
-    pattern2='#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'
-    replacement2='JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'
-    pattern3='#JVM_OPTS="\$JVM_OPTS -Djava.security.auth.login.config=\$CASSANDRA_HOME/conf/cassandra-jaas.config"'
-    replacement3='JVM_OPTS="$JVM_OPTS -Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config"'
-    pattern4='#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"'
-    replacement4='JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"'
-    replacement_list = [(pattern,replacement), (pattern1, replacement1), (pattern2, replacement2),
+    pattern2 = '#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'
+    replacement2 = 'JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'
+    pattern3 = '#JVM_OPTS="\$JVM_OPTS -Djava.security.auth.login.config=\$CASSANDRA_HOME/conf/cassandra-jaas.config"'
+    replacement3 = 'JVM_OPTS="$JVM_OPTS -Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config"'
+    pattern4 = '#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"'
+    replacement4 = 'JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"'
+    replacement_list = [(pattern, replacement), (pattern1, replacement1), (pattern2, replacement2),
                         (pattern3, replacement3), (pattern4, replacement4)]
 
     common.replaces_in_file(conf_file, replacement_list)
