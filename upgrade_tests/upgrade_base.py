@@ -8,7 +8,6 @@ from distutils.version import LooseVersion
 from unittest import skipIf
 
 from ccmlib.common import get_version_from_build, is_win
-
 from dtest import DEBUG, Tester, debug
 
 UPGRADE_TEST_RUN = os.environ.get('UPGRADE_TEST_RUN', '').lower() in {'true', 'yes'}
@@ -135,7 +134,7 @@ class UpgradeTester(Tester):
         cluster.populate(nodes)
         node1 = cluster.nodelist()[0]
         cluster.set_install_dir(version=self.UPGRADE_PATH.starting_version)
-        cluster.start(wait_for_binary_proto=True)
+        cluster.start(wait_for_binary_proto=True, wait_other_notice=True)
 
         node1 = cluster.nodelist()[0]
         time.sleep(0.2)
