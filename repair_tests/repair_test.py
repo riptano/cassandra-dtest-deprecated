@@ -1,5 +1,5 @@
-import time
 import threading
+import time
 from collections import namedtuple
 from unittest import skip
 
@@ -62,7 +62,7 @@ class TestRepair(Tester):
 
         session = self.patient_cql_connection(node_to_check, 'ks')
         result = list(session.execute("SELECT * FROM cf LIMIT {}".format(rows * 2)))
-        self.assertEqual(len(result), rows, len(result))
+        self.assertEqual(len(result), rows, "got {}, expected {}".format(len(result), rows))
 
         for k in found:
             query_c1c2(session, k, ConsistencyLevel.ONE)
@@ -163,9 +163,6 @@ class TestRepair(Tester):
         for node in cluster.nodelist():
             self.assertTrue("Starting anticompaction")
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11256',
-                   flaky=True)
     def simple_sequential_repair_test(self):
         """
         Calls simple repair test with a sequential repair
@@ -230,7 +227,7 @@ class TestRepair(Tester):
         # interfere with the test (this must be after the populate)
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False}, batch_commitlog=True)
         debug("Starting cluster..")
-        cluster.populate(3).start()
+        cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
 
         session = self.patient_cql_connection(node1)
@@ -243,7 +240,7 @@ class TestRepair(Tester):
         node3.flush()
         node3.stop(wait_other_notice=True)
         insert_c1c2(session, keys=(1000, ), consistency=ConsistencyLevel.TWO)
-        node3.start(wait_other_notice=True, wait_for_binary_proto=True)
+        node3.start(wait_for_binary_proto=True)
         insert_c1c2(session, keys=range(1001, 2001), consistency=ConsistencyLevel.ALL)
 
         cluster.flush()
