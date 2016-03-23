@@ -1,9 +1,11 @@
 from ccmlib.node import NodetoolError
 from dtest import Tester
 from jmxutils import apply_jmx_authentication
+from tools import since
 
 
-class TestAuth(Tester):
+@since(3.6)
+class TestJMXAuth(Tester):
 
     def __init__(self, *args, **kwargs):
         self.ignore_log_patterns = [
@@ -14,7 +16,13 @@ class TestAuth(Tester):
         ]
         Tester.__init__(self, *args, **kwargs)
 
-    def login_test(self):
+    def basic_auth_test(self):
+        """
+        Some basic smoke testing of JMX authentication and authorization.
+        Uses nodetool as a means of exercising the JMX interface as JolokiaAgent
+        exposes its own connector which bypasses the in-built security features
+        @jira_ticket CASSANDRA-10091
+        """
         self.prepare()
         [node] = self.cluster.nodelist()
         node.nodetool('-u cassandra -pw cassandra status')
