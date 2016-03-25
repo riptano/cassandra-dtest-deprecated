@@ -57,19 +57,18 @@ def apply_jmx_authentication(node):
     else:
         conf_file = os.path.join(node.get_conf_dir(), common.CASSANDRA_ENV)
 
-    pattern = 'JVM_OPTS="\$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=false"'
-    replacement = 'JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=true"'
-    pattern1 = 'JVM_OPTS="\$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"'
-    replacement1 = '#JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"'
-    pattern2 = '#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'
-    replacement2 = 'JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'
-    pattern3 = '#JVM_OPTS="\$JVM_OPTS -Djava.security.auth.login.config=\$CASSANDRA_HOME/conf/cassandra-jaas.config"'
-    replacement3 = 'JVM_OPTS="$JVM_OPTS -Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config"'
-    pattern4 = '#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"'
-    replacement4 = 'JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"'
-    replacement_list = [(pattern, replacement), (pattern1, replacement1), (pattern2, replacement2),
-                        (pattern3, replacement3), (pattern4, replacement4)]
-
+    replacement_list = [
+        ('JVM_OPTS="\$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=false"',
+         'JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.authenticate=true"'),
+        ('JVM_OPTS="\$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"',
+         '#JVM_OPTS="$JVM_OPTS -Dcom.sun.management.jmxremote.password.file=/etc/cassandra/jmxremote.password"'),
+        ('#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"',
+         'JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.remote.login.config=CassandraLogin"'),
+        ('#JVM_OPTS="\$JVM_OPTS -Djava.security.auth.login.config=\$CASSANDRA_HOME/conf/cassandra-jaas.config"',
+         'JVM_OPTS="$JVM_OPTS -Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config"'),
+        ('#JVM_OPTS="\$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"',
+         'JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy"')
+    ]
     common.replaces_in_file(conf_file, replacement_list)
 
 

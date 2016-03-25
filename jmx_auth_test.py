@@ -4,17 +4,8 @@ from jmxutils import apply_jmx_authentication
 from tools import since
 
 
-@since(3.6)
+@since('3.6')
 class TestJMXAuth(Tester):
-
-    def __init__(self, *args, **kwargs):
-        self.ignore_log_patterns = [
-            # This one occurs if we do a non-rolling upgrade, the node
-            # it's trying to send the migration to hasn't started yet,
-            # and when it does, it gets replayed and everything is fine.
-            r'Can\'t send migration request: node.*is down',
-        ]
-        Tester.__init__(self, *args, **kwargs)
 
     def basic_auth_test(self):
         """
@@ -40,6 +31,9 @@ class TestJMXAuth(Tester):
 
         with self.assertRaisesRegexp(NodetoolError, 'Username and/or password are incorrect'):
             node.nodetool('-u test -pw badpassword gossipinfo')
+
+        with self.assertRaisesRegexp(NodetoolError, "Required key 'username' is missing"):
+            node.nodetool('gossipinfo')
 
         # role must have LOGIN attribute
         with self.assertRaisesRegexp(NodetoolError, 'jmx_user is not permitted to log in'):
