@@ -20,7 +20,7 @@ class TestTopology(Tester):
         cluster = self.cluster.populate(1)
         node1, = cluster.nodelist()
 
-        node1.start(wait_for_binary_proto=True, join_ring=False,
+        node1.start(wait_for_binary_proto=True, join_ring=False, wait_other_notice=False,
                     jvm_args=["-Dcassandra.size_recorder_interval=1"])
 
         # initial delay is 30s

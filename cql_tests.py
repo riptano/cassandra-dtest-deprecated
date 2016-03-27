@@ -636,7 +636,7 @@ class AbortedQueriesTester(CQLTester):
         cluster.populate(2)
         node1, node2 = cluster.nodelist()
 
-        node1.start(wait_for_binary_proto=True, join_ring=False)  # ensure other node executes queries
+        node1.start(wait_for_binary_proto=True, join_ring=False, wait_other_notice=False)  # ensure other node executes queries
         node2.start(wait_for_binary_proto=True,
                     jvm_args=["-Dcassandra.monitoring_check_interval_ms=50",
                               "-Dcassandra.test.read_iteration_delay_ms=1500"])  # see above for explanation
@@ -744,7 +744,7 @@ class AbortedQueriesTester(CQLTester):
         cluster.populate(2)
         node1, node2 = cluster.nodelist()
 
-        node1.start(wait_for_binary_proto=True, join_ring=False)  # ensure other node executes queries
+        node1.start(wait_for_binary_proto=True, join_ring=False, wait_other_notice=False)  # ensure other node executes queries
         node2.start(wait_for_binary_proto=True,
                     jvm_args=["-Dcassandra.monitoring_check_interval_ms=50",
                               "-Dcassandra.test.read_iteration_delay_ms=1500"])  # see above for explanation
