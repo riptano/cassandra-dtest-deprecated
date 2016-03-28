@@ -295,7 +295,8 @@ class UpgradeTester(Tester):
         """
         self.upgrade_scenario(rolling=True, internode_ssl=True)
 
-    def upgrade_scenario(self, populate=True, create_schema=True, rolling=False, after_upgrade_call=(), internode_ssl=False):
+    def upgrade_scenario(self, populate=True, create_schema=True,
+                         rolling=False, after_upgrade_call=(), internode_ssl=False):
         # Record the rows we write as we go:
         self.row_values = set()
         cluster = self.cluster
@@ -379,7 +380,7 @@ class UpgradeTester(Tester):
                 self._check_counters()
                 self._check_select_count()
 
-            # run custom post-upgrade callables
+        # run custom post-upgrade callables
         for call in after_upgrade_call:
             call()
 
@@ -723,7 +724,11 @@ class BootstrapMixin(object):
         cluster.populate([2, 2])
         [node.start(use_jna=True, wait_for_binary_proto=True) for node in self.cluster.nodelist()]
         self._multidc_schema_create()
-        self.upgrade_scenario(populate=False, create_schema=False, after_upgrade_call=(self._bootstrap_new_node_multidc,))
+        self.upgrade_scenario(
+            populate=False,
+            create_schema=False,
+            after_upgrade_call=(self._bootstrap_new_node_multidc,)
+        )
 
     def _multidc_schema_create(self):
         session = self.patient_cql_connection(self.cluster.nodelist()[0], protocol_version=self.protocol_version)
