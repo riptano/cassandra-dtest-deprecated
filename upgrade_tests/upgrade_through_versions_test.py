@@ -697,7 +697,7 @@ class BootstrapMixin(object):
         debug("Adding a node to the cluster")
         nnode = new_node(self.cluster, remote_debug_port=str(2000 + len(self.cluster.nodes)), data_center='dc2')
 
-        nnode.start(use_jna=True, wait_other_notice=True, wait_for_binary_proto=True)
+        nnode.start(use_jna=True, wait_other_notice=300, wait_for_binary_proto=300)
         self._write_values()
         self._increment_counters()
         self._check_values()
