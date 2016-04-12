@@ -989,18 +989,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             self.assertEqual(res, [[1, 2, 1, 2, 3],
                                    [4, 2, 4, 2, 6]])
 
-            # Range query with DISTINCT
-            res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE s >= 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 1],
-                                   [2, 2],
-                                   [4, 4],
-                                   [3, 3]])
-
-            # Range query with DISTINCT and LIMIT
-            res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE s >= 1 LIMIT 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 1],
-                                   [2, 2]])
-
             # Single partition queries
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a = 0 AND c >= 1 ALLOW FILTERING"))
             self.assertEqual(res, [[0, 1, 0, 1, 1],
@@ -1027,10 +1015,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a = 3 AND c >= 1 AND s > 1 LIMIT 2 ALLOW FILTERING"))
             self.assertEqual(res, [[3, 1, 3, 1, 4],
                                    [3, 2, 3, 2, 5]])
-
-            #  Single partition query with DISTINCT
-            res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a = 2 AND s >= 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[2, 2]])
 
             # Single partition query with ORDER BY
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a = 0 AND c >= 1 ORDER BY b DESC ALLOW FILTERING"))
@@ -1072,18 +1056,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a IN (0, 1, 2, 3, 4) AND c = 2 AND s >= 1 LIMIT 2 ALLOW FILTERING"))
             self.assertEqual(res, [[1, 2, 1, 2, 3],
                                    [3, 2, 3, 2, 5]])
-
-            # Multi-partitions query with DISTINCT
-            res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a IN (0, 1, 2, 3, 4) AND s >= 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 1],
-                                   [2, 2],
-                                   [3, 3],
-                                   [4, 4]])
-
-            # Multi-partitions query with DISTINCT and LIMIT
-            res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a IN (0, 1, 2, 3, 4) AND s >= 1 LIMIT 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 1],
-                                   [2, 2]])
 
     @since('2.1.14')
     def test_paging_on_compact_table_with_tombstone_on_first_column(self):
