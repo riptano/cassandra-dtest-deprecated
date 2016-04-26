@@ -452,4 +452,3 @@ class TestReplaceAddress(Tester):
         debug("Verifying querying works again.")
         finalData = list(session.execute(query))
         self.assertListEqual(initialData, finalData)
-
