@@ -250,10 +250,7 @@ class TestReplaceAddress(Tester):
         cluster.start()
 
         debug("Inserting Data...")
-        if cluster.version() < "2.1":
-            node1.stress(['-o', 'insert', '--num-keys=10000', '--replication-factor=3'])
-        else:
-            node1.stress(['write', 'n=10000', '-schema', 'replication(factor=3)'])
+        node1.stress(['write', 'n=10K', '-schema', 'replication(factor=3)'])
 
         mark = None
         for auto_bootstrap in (True, False):
@@ -301,10 +298,7 @@ class TestReplaceAddress(Tester):
         cluster.start()
 
         debug('Inserting Data...')
-        if cluster.version() < "2.1":
-            node1.stress(['-o', 'insert', '--num-keys=10000', '--replication-factor=3'])
-        else:
-            node1.stress(['write', 'n=10000', '-schema', 'replication(factor=3)'])
+        node1.stress(['write', 'n=10K', '-schema', 'replication(factor=3)'])
 
         session = self.patient_cql_connection(node1)
         query = SimpleStatement('select * from keyspace1.standard1 LIMIT 1', consistency_level=ConsistencyLevel.THREE)
