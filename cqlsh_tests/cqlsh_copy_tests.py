@@ -282,11 +282,30 @@ class CqlshCopyTest(Tester):
         finally:
             sys.path = saved_path
 
+    def get_table_meta(self, table_name):
+        ks_meta = self.session.cluster.metadata.keyspaces[self.ks]
+        if ks_meta is None:
+            debug("Failed to retrieve keyspace metadata, refreshing metadata")
+            self.session.cluster.refresh_schema_metadata()
+            ks_meta = self.session.cluster.metadata.keyspaces[self.ks]
+            if ks_meta is None:
+                raise RuntimeError("Keyspace {} not found in metadata".format(self.ks))
+        table_meta = ks_meta.tables[table_name]
+        if table_meta is None:
+            debug("Failed to retrieve table metadata, refreshing ks metadata")
+            self.session.cluster.refresh_keyspace_metadata(self.ks)
+            ks_meta = self.session.cluster.metadata.keyspaces[self.ks]
+            table_meta = ks_meta.tables[table_name]
+            if table_meta is None:
+                raise RuntimeError("Table {} not found in ks metadata for {}".format(table_name, self.ks))
+
+        return table_meta
+
     def assertCsvResultEqual(self, csv_filename, results, table_name=None,
                              columns=None, cql_type_names=None, nullval=''):
         if cql_type_names is None:
             if table_name:
-                table_meta = self.session.cluster.metadata.keyspaces[self.ks].tables[table_name]
+                table_meta = self.get_table_meta(table_name)
                 cql_type_names = [table_meta.columns[c].cql_type for c in table_meta.columns
                                   if columns is None or c in columns]
             else:
@@ -545,10 +564,6 @@ class CqlshCopyTest(Tester):
         results_imported = list(self.session.execute("SELECT * FROM ks.testnullindicator"))
         self.assertEquals(results, results_imported)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11675',
-                   flaky=True,
-                   notes='failed once on trunk')
     def test_default_null_indicator(self):
         """
         Test the default null indicator.
@@ -565,10 +580,6 @@ class CqlshCopyTest(Tester):
         """
         self.custom_null_indicator_template(copy_from_options={'PREPAREDSTATEMENTS': 'False'})
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11675',
-                   flaky=True,
-                   notes='failed once on trunk')
     def test_undefined_as_null_indicator(self):
         """
         Use custom_null_indicator_template to test COPY with NULL = undefined.
@@ -581,10 +592,6 @@ class CqlshCopyTest(Tester):
         """
         self.custom_null_indicator_template('undefined', copy_from_options={'PREPAREDSTATEMENTS': 'False'})
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11675',
-                   flaky=True,
-                   notes='failed once on trunk')
     def test_null_as_null_indicator(self):
         """
         Use custom_null_indicator_template to test COPY with NULL = 'null'.
@@ -1654,10 +1661,6 @@ class CqlshCopyTest(Tester):
         self.assertNotIn('child process(es) died unexpectedly', err)
         self.assertFalse(results)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11675',
-                   flaky=True,
-                   notes='failed once on trunk')
     def test_all_datatypes_write(self):
         """
         Test that, after COPYing a table containing all CQL datatypes to a CSV
@@ -1979,10 +1982,6 @@ class CqlshCopyTest(Tester):
         do_test(expected_vals_usual, ',', '.')
         do_test(expected_vals_inverted, '.', ',')
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11675',
-                   flaky=True,
-                   notes='failed once on trunk')
     @since('3.4')
     def test_round_trip_with_sub_second_precision(self):
         """
@@ -2864,10 +2863,6 @@ class CqlshCopyTest(Tester):
         results = list(self.session.execute("SELECT * FROM {}".format(stress_ks_table_name)))
         self.assertCsvResultEqual(tempfile.name, results, stress_table_name)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11675',
-                   flaky=True,
-                   notes='failed once on trunk')
     def test_copy_from_with_brackets_in_UDT(self):
         """
         Test that we can import a user defined type even when it contains brackets in its values.
