@@ -301,7 +301,7 @@ class StorageProxyCQLTester(CQLTester):
     def partition_key_allow_filtering_test(self):
         """
         Test for CASSANDRA-11031 : filter on part of partition keys
-        FIXME 
+         
         """
         session = self.prepare()
 
