@@ -298,6 +298,105 @@ class StorageProxyCQLTester(CQLTester):
         res = session.execute("SELECT COUNT(*) FROM test7 WHERE kind = 'ev1'")
         self.assertEqual(rows_to_list(res), [[0]])
 
+    def partition_key_allow_filtering_test(self):
+        """
+        Test for CASSANDRA-11031 : filter on part of partition keys
+        FIXME 
+        """
+        session = self.prepare()
+
+        session.execute("""
+            CREATE TABLE IF NOT EXISTS test_filter (
+                k1 int,
+                k2 int,
+                ck1 int,
+                v int,
+                PRIMARY KEY ((k1, k2), ck1)
+            )
+        """)
+
+        session.execute("TRUNCATE test_filter")
+
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 0, 0, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 0, 1, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 0, 2, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 0, 3, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 1, 0, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 1, 1, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 1, 2, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 1, 3, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 0, 0, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 0, 1, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 0, 2, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 0, 3, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 1, 0, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 1, 1, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 1, 2, 0)")
+        session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 1, 3, 0)")
+
+        # select test
+        res = session.execute("SELECT * FROM test_filter WHERE k1 = 0 ALLOW FILTERING")
+        res_list = rows_to_list(res)
+        res_list.sort()
+        expected = [[0, 0, 0, 0],[0, 0, 1, 0],[0, 0, 2, 0],[0, 0, 3, 0],
+            [0, 1, 0, 0],[0, 1, 1, 0],[0, 1, 2, 0],[0, 1, 3, 0]]
+        expected.sort()
+        self.assertEqual(res_list, expected)
+
+        res = session.execute("SELECT * FROM test_filter WHERE k1 = 1 ALLOW FILTERING")
+        res_list = rows_to_list(res)
+        res_list.sort()
+        expected = [[1, 0, 0, 0],[1, 0, 1, 0],[1, 0, 2, 0],[1, 0, 3, 0],
+            [1, 1, 0, 0],[1, 1, 1, 0],[1, 1, 2, 0],[1, 1, 3, 0]]
+        expected.sort()
+        self.assertEqual(res_list, expected)
+
+        res = session.execute("SELECT * FROM test_filter WHERE k1 = 2 ALLOW FILTERING")
+        res_list = rows_to_list(res)
+        self.assertEqual(len(res_list), 0)
+
+        res = session.execute("SELECT * FROM test_filter WHERE k2 = 0 ALLOW FILTERING")
+        res_list = rows_to_list(res)
+        res_list.sort()
+        expected = [[0, 0, 0, 0],[0, 0, 1, 0],[0, 0, 2, 0],[0, 0, 3, 0],
+            [1, 0, 0, 0],[1, 0, 1, 0],[1, 0, 2, 0],[1, 0, 3, 0]]
+        expected.sort()
+        self.assertEqual(res_list, expected)
+
+        res = session.execute("SELECT * FROM test_filter WHERE k2 = 1 ALLOW FILTERING")
+        res_list = rows_to_list(res)
+        res_list.sort()
+        expected = [[0, 1, 0, 0],[0, 1, 1, 0],[0, 1, 2, 0],[0, 1, 3, 0],
+            [1, 1, 0, 0],[1, 1, 1, 0],[1, 1, 2, 0],[1, 1, 3, 0]]
+        expected.sort()
+        self.assertEqual(res_list, expected)
+
+        res = session.execute("SELECT * FROM test_filter WHERE k2 = 2 ALLOW FILTERING")
+        res_list = rows_to_list(res)
+        self.assertEqual(len(res_list), 0)
+
+        # count(*) test
+        res = session.execute("SELECT count(*) FROM test_filter WHERE k2 = 0 ALLOW FILTERING")
+        self.assertEqual(rows_to_list(res), [[8]])
+
+        res = session.execute("SELECT count(*) FROM test_filter WHERE k2 = 1 ALLOW FILTERING")
+        self.assertEqual(rows_to_list(res), [[8]])
+
+        res = session.execute("SELECT count(*) FROM test_filter WHERE k2 = 2 ALLOW FILTERING")
+        self.assertEqual(rows_to_list(res), [[0]])
+
+        try:
+            session.execute("SELECT * FROM test_filter WHERE k1 = 0")
+            self.fail("Partition key parts: k1 must be restricted as other parts are")
+        except Exception as e:
+            pass
+
+        try:
+            session.execute("SELECT * FROM test_filter WHERE k2 = 0")
+            self.fail("Partition key parts: k1 must be restricted as other parts are")
+        except Exception as e:
+            pass
+
     def batch_test(self):
         """
         Smoke test for BATCH statements:
