@@ -387,7 +387,7 @@ class StorageProxyCQLTester(CQLTester):
 
         try:
             session.execute("SELECT * FROM test_filter WHERE k1 = 0")
-            self.fail("Partition key parts: k1 must be restricted as other parts are")
+            self.fail("Partition key parts: k2 must be restricted as other parts are")
         except Exception as e:
             pass
 
