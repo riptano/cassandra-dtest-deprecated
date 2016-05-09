@@ -384,6 +384,16 @@ class StorageProxyCQLTester(CQLTester):
             rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 2 ALLOW FILTERING")),
             [])
 
+        # filtering on both Partition Key and Clustering key
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 AND ck1=0 ALLOW FILTERING"))),
+            [[0, 0, 0, 0],
+             [0, 1, 0, 0]])
+
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 AND k2=1 AND ck1=0 ALLOW FILTERING"))),
+            [[0, 1, 0, 0]])
+
         # count(*) test
         self.assertEqual(rows_to_list(
             session.execute("SELECT count(*) FROM test_filter WHERE k2 = 0 ALLOW FILTERING")),
