@@ -301,7 +301,6 @@ class StorageProxyCQLTester(CQLTester):
     def partition_key_allow_filtering_test(self):
         """
         Test for CASSANDRA-11031 : filter on part of partition keys
-         
         """
         session = self.prepare()
 
@@ -335,7 +334,8 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 1, 3, 0)")
 
         # select test
-        self.assertEqual(sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 ALLOW FILTERING"))), 
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 ALLOW FILTERING"))),
             [[0, 0, 0, 0],
              [0, 0, 1, 0],
              [0, 0, 2, 0],
@@ -343,10 +343,10 @@ class StorageProxyCQLTester(CQLTester):
              [0, 1, 0, 0],
              [0, 1, 1, 0],
              [0, 1, 2, 0],
-             [0, 1, 3, 0]]
-            )
+             [0, 1, 3, 0]])
 
-        self.assertEqual(sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 1 ALLOW FILTERING"))), 
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 1 ALLOW FILTERING"))),
             [[1, 0, 0, 0],
              [1, 0, 1, 0],
              [1, 0, 2, 0],
@@ -354,24 +354,23 @@ class StorageProxyCQLTester(CQLTester):
              [1, 1, 0, 0],
              [1, 1, 1, 0],
              [1, 1, 2, 0],
-             [1, 1, 3, 0]]
-            )
+             [1, 1, 3, 0]])
 
-        self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 2 ALLOW FILTERING")), 
-            [])
+        self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 2 ALLOW FILTERING")), [])
 
-        self.assertEqual(sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 0 ALLOW FILTERING"))), 
-            [[0, 0, 0, 0], 
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 0 ALLOW FILTERING"))),
+            [[0, 0, 0, 0],
              [0, 0, 1, 0],
              [0, 0, 2, 0],
              [0, 0, 3, 0],
              [1, 0, 0, 0],
              [1, 0, 1, 0],
              [1, 0, 2, 0],
-             [1, 0, 3, 0]]
-            )
+             [1, 0, 3, 0]])
 
-        self.assertEqual(sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 1 ALLOW FILTERING"))), 
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 1 ALLOW FILTERING"))),
             [[0, 1, 0, 0],
              [0, 1, 1, 0],
              [0, 1, 2, 0],
@@ -379,20 +378,23 @@ class StorageProxyCQLTester(CQLTester):
              [1, 1, 0, 0],
              [1, 1, 1, 0],
              [1, 1, 2, 0],
-             [1, 1, 3, 0]]
-            )
+             [1, 1, 3, 0]])
 
-        self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 2 ALLOW FILTERING")), 
+        self.assertEqual(
+            rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 2 ALLOW FILTERING")),
             [])
 
-        # count(*) test 
-        self.assertEqual(rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 0 ALLOW FILTERING")), 
+        # count(*) test
+        self.assertEqual(rows_to_list(
+            session.execute("SELECT count(*) FROM test_filter WHERE k2 = 0 ALLOW FILTERING")),
             [[8]])
 
-        self.assertEqual(rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 1 ALLOW FILTERING")), 
+        self.assertEqual(
+            rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 1 ALLOW FILTERING")),
             [[8]])
 
-        self.assertEqual(rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 2 ALLOW FILTERING")), 
+        self.assertEqual(
+            rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 2 ALLOW FILTERING")),
             [[0]])
 
         # test invalid query
