@@ -276,7 +276,9 @@ class TestSecondaryIndexes(Tester):
         else:
             time.sleep(1)
             self.wait_for_schema_agreement(session)
-
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11925',
+                   flaky=True)
     @since('3.0')
     def test_manual_rebuild_index(self):
         """
