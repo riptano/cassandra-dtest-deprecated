@@ -298,8 +298,8 @@ class CqlshCopyTest(Tester):
             else:
                 raise RuntimeError("table_name is required if cql_type_names are not specified")
 
-        processed_results = list(self.result_to_csv_rows(results, cql_type_names, nullval=nullval))
-        csv_results = list(csv_rows(csv_filename))
+        processed_results = list(self.result_to_csv_rows(results, cql_type_names, nullval=nullval))[0]
+        csv_results = list(csv_rows(csv_filename))[0]
 
         self.maxDiff = None
         try:
