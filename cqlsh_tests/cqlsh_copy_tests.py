@@ -1329,9 +1329,9 @@ class CqlshCopyTest(Tester):
                                    os.path.join(gettempdir(), 'testreadmult[5-9]*.csv')]))
 
     @known_failure(failure_source='test',
-               jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11701',
-               flaky=True,
-               notes='windows')
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11701',
+                   flaky=True,
+                   notes='windows')
     def test_writing_with_max_output_size(self):
         """
         Test writing to multiple CSV files:
