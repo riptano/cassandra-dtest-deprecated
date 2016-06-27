@@ -1802,30 +1802,48 @@ class TestAuthRoles(Tester):
         # unquoted identifiers and unreserved keyword do not preserve case
         # count
         cassandra.execute("CREATE ROLE ROLE1 WITH PASSWORD = '12345' AND LOGIN = true")
-        self.assert_unauthenticated("Username and/or password are incorrect", 'ROLE1', '12345')
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username ROLE1 and/or password are incorrect", 'ROLE1', '12345')
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'ROLE1', '12345')
         self.get_session(user='role1', password='12345')
 
         cassandra.execute("CREATE ROLE COUNT WITH PASSWORD = '12345' AND LOGIN = true")
-        self.assert_unauthenticated("Username and/or password are incorrect", 'COUNT', '12345')
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username COUNT and/or password are incorrect", 'COUNT', '12345')
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'COUNT', '12345')
         self.get_session(user='count', password='12345')
 
         # string literals and quoted names do preserve case
         cassandra.execute("CREATE ROLE 'ROLE2' WITH PASSWORD = '12345' AND LOGIN = true")
         self.get_session(user='ROLE2', password='12345')
-        self.assert_unauthenticated("Username and/or password are incorrect", 'Role2', '12345')
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username Role2 and/or password are incorrect", 'Role2', '12345')
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'Role2', '12345')
 
         cassandra.execute("""CREATE ROLE "ROLE3" WITH PASSWORD = '12345' AND LOGIN = true""")
         self.get_session(user='ROLE3', password='12345')
-        self.assert_unauthenticated("Username and/or password are incorrect", 'Role3', '12345')
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username Role3 and/or password are incorrect", 'Role3', '12345')
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'Role3', '12345')
 
         # when using legacy USER syntax, both unquoted identifiers and string literals preserve case
         cassandra.execute("CREATE USER USER1 WITH PASSWORD '12345'")
         self.get_session(user='USER1', password='12345')
-        self.assert_unauthenticated("Username and/or password are incorrect", 'User1', '12345')
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username User1 and/or password are incorrect", 'User1', '12345')
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'User1', '12345')
 
         cassandra.execute("CREATE USER 'USER2' WITH PASSWORD '12345'")
         self.get_session(user='USER2', password='12345')
-        self.assert_unauthenticated("Username and/or password are incorrect", 'User2', '12345')
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username User2 and/or password are incorrect", 'User2', '12345')
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'User2', '12345')
 
     def role_requires_login_privilege_to_authenticate_test(self):
         """
@@ -1882,7 +1900,10 @@ class TestAuthRoles(Tester):
         self.prepare()
         cassandra = self.get_session(user='cassandra', password='cassandra')
         cassandra.execute("CREATE ROLE mike WITH SUPERUSER = false AND LOGIN = true")
-        self.assert_unauthenticated("Username and/or password are incorrect", 'mike', None)
+        if self.cluster.cassandra_version() >= '3.8':
+            self.assert_unauthenticated("Provided username mike and/or password are incorrect", 'mike', None)
+        else:
+            self.assert_unauthenticated("Username and/or password are incorrect", 'mike', None)
         cassandra.execute("ALTER ROLE mike WITH PASSWORD = '12345'")
         self.get_session(user='mike', password='12345')
 
