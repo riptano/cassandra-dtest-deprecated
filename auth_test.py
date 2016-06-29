@@ -9,7 +9,7 @@ from cassandra.protocol import SyntaxException
 from assertions import (assert_all, assert_invalid, assert_one,
                         assert_unauthorized)
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
-from tools import since
+from tools import known_failure, since
 
 
 class TestAuth(Tester):
@@ -66,6 +66,9 @@ class TestAuth(Tester):
             session = self.patient_exclusive_cql_connection(node, user='cassandra', password='cassandra')
             self.assertEquals(3, session.cluster.metadata.keyspaces['system_auth'].replication_strategy.replication_factor)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12064',
+                   flaky=True)
     def login_test(self):
         """
         * Launch a one node cluster
@@ -79,11 +82,11 @@ class TestAuth(Tester):
         try:
             self.get_session(user='cassandra', password='badpassword')
         except NoHostAvailable as e:
-            assert isinstance(e.errors.values()[0], AuthenticationFailed)
+            self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
         try:
             self.get_session(user='doesntexist', password='doesntmatter')
         except NoHostAvailable as e:
-            assert isinstance(e.errors.values()[0], AuthenticationFailed)
+            self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
 
     # from 2.2 role creation is granted by CREATE_ROLE permissions, not superuser status
     @since('1.2', max_version='2.1.x')
@@ -1175,6 +1178,9 @@ class TestAuthRoles(Tester):
                                        cassandra,
                                        "LIST ALL PERMISSIONS")
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def create_and_grant_roles_with_superuser_status_test(self):
         """
         * Launch a one node cluster
@@ -1673,6 +1679,9 @@ class TestAuthRoles(Tester):
                             "LIST ALL PERMISSIONS OF john",
                             "You are not authorized to view john's permissions")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def role_caching_authenticated_user_test(self):
         """
         This test is to show that the role caching in AuthenticatedUser
@@ -2223,6 +2232,9 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP FUNCTION ks.plus_one(int)")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def drop_keyspace_cleans_up_function_level_permissions_test(self):
         """
         * Launch a one node cluster
@@ -2246,6 +2258,9 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP KEYSPACE ks")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def udf_permissions_in_selection_test(self):
         """
         Verify EXECUTE permission works in a SELECT when UDF is one of the columns requested
@@ -2300,6 +2315,9 @@ class TestAuthRoles(Tester):
         cassandra.execute("GRANT EXECUTE ON FUNCTION ks.plus_one(int) TO mike")
         return mike.execute(cql)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def inheritence_of_udf_permissions_test(self):
         """
         * Launch a one node cluster
@@ -2363,6 +2381,9 @@ class TestAuthRoles(Tester):
                        "Altering permissions on builtin functions is not supported",
                        InvalidRequest)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def disallow_grant_execute_on_non_function_resources_test(self):
         """
         * Launch a one node cluster

@@ -6,9 +6,10 @@ import subprocess
 import tempfile
 import time
 
-from assertions import assert_none, assert_one
 from ccmlib import common
+from assertions import assert_none, assert_one, assert_length_equal
 from dtest import Tester, debug
+from distutils.version import LooseVersion
 from nose.tools import assert_equal
 from tools import known_failure, since
 
@@ -99,10 +100,6 @@ class TestCompaction(Tester):
         # allow 5% size increase - if we have few sstables it is not impossible that live size increases *slightly* after compaction
         self.assertLess(finalValue, initialValue * 1.05)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11463',
-                   flaky=False,
-                   notes='Fails on 2.1, one failure on trunk offheap')
     def bloomfilter_size_test(self):
         """
         @jira_ticket CASSANDRA-11344
@@ -203,26 +200,26 @@ class TestCompaction(Tester):
         time.sleep(40)
         expired_sstables = node1.get_sstables('ks', 'cf')
         expected_sstable_count = 1
-        if self.cluster.version() > '3.1':
+        if LooseVersion(self.cluster.version()) > LooseVersion('3.1'):
             expected_sstable_count = cluster.data_dir_count
         self.assertEqual(len(expired_sstables), expected_sstable_count)
         # write a new sstable to make DTCS check for expired sstables:
         for x in range(0, 100):
-            session.execute('insert into cf (key, val) values (%d, %d)' % (x, x))
+            session.execute('insert into cf (key, val) values ({}, {})'.format(x, x))
         node1.flush()
         time.sleep(5)
         # we only check every 10 minutes - sstable should still be there:
         for expired_sstable in expired_sstables:
-            assert expired_sstable in node1.get_sstables('ks', 'cf')
+            self.assertIn(expired_sstable, node1.get_sstables('ks', 'cf'))
 
         session.execute("alter table cf with compaction =  {'class':'DateTieredCompactionStrategy', 'max_sstable_age_days':0.00035, 'min_threshold':2, 'expired_sstable_check_frequency_seconds':0}")
         time.sleep(1)
         for x in range(0, 100):
-            session.execute('insert into cf (key, val) values (%d, %d)' % (x, x))
+            session.execute('insert into cf (key, val) values ({}, {})'.format(x, x))
         node1.flush()
         time.sleep(5)
         for expired_sstable in expired_sstables:
-            assert expired_sstable not in node1.get_sstables('ks', 'cf')
+            self.assertNotIn(expired_sstable, node1.get_sstables('ks', 'cf'))
 
     def compaction_throughput_test(self):
         """
@@ -245,7 +242,7 @@ class TestCompaction(Tester):
 
         matches = block_on_compaction_log(node1)
         stringline = matches[0]
-        units = 'MB/s' if cluster.version() < '3.6' else '(K|M|G)iB/s'
+        units = 'MB/s' if LooseVersion(cluster.version()) < LooseVersion('3.6') else '(K|M|G)iB/s'
         throughput_pattern = re.compile('''.*           # it doesn't matter what the line starts with
                                            =            # wait for an equals sign
                                            ([\s\d\.]*)  # capture a decimal number, possibly surrounded by whitespace
@@ -323,19 +320,18 @@ class TestCompaction(Tester):
             session.execute("UPDATE ks.large SET properties[%i] = '%s' WHERE userid = 'user'" % (i, get_random_word(strlen)))
 
         ret = list(session.execute("SELECT properties from ks.large where userid = 'user'"))
-        assert len(ret) == 1
+        assert_length_equal(ret, 1)
         self.assertEqual(200, len(ret[0][0].keys()))
 
         node.flush()
 
         node.nodetool('compact ks large')
         verb = 'Writing' if self.cluster.version() > '2.2' else 'Compacting'
-        sizematcher = '\d+ bytes' if self.cluster.version() < '3.6' else '\d+\.\d{3}(K|M|G)iB'
+        sizematcher = '\d+ bytes' if LooseVersion(self.cluster.version()) < LooseVersion('3.6') else '\d+\.\d{3}(K|M|G)iB'
         node.watch_log_for('{} large partition ks/large:user \({}\)'.format(verb, sizematcher), from_mark=mark, timeout=180)
 
         ret = list(session.execute("SELECT properties from ks.large where userid = 'user'"))
-
-        assert len(ret) == 1
+        assert_length_equal(ret, 1)
         self.assertEqual(200, len(ret[0][0].keys()))
 
     def disable_autocompaction_nodetool_test(self):
@@ -396,6 +392,9 @@ class TestCompaction(Tester):
         time.sleep(2)
         self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def disable_autocompaction_alter_test(self):
         """
         Make sure we can enable compaction using an alter-statement

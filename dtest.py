@@ -95,8 +95,8 @@ logging.basicConfig(filename=os.path.join(LOG_SAVED_DIR, "dtest.log"),
                     level=logging.DEBUG)
 
 LOG = logging.getLogger('dtest')
-# set python-driver log level to WARN by default for dtest
-logging.getLogger('cassandra').setLevel(logging.WARNING)
+# set python-driver log level to INFO by default for dtest
+logging.getLogger('cassandra').setLevel(logging.INFO)
 
 # There are times when we want to know the C* version we're testing against
 # before we call Tester.setUp. In the general case, we can't know that -- the
@@ -113,6 +113,30 @@ if _cassandra_version_slug:
     CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(ccm_repo_cache_dir)
 else:
     CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(CASSANDRA_DIR)
+
+
+# Determine the location of the libjemalloc jar so that we can specify it
+# through environment variables when start Cassandra.  This reduces startup
+# time, making the dtests run faster.
+def find_libjemalloc():
+    if is_win():
+        # let the normal bat script handle finding libjemalloc
+        return ""
+
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    script = os.path.join(this_dir, "findlibjemalloc.sh")
+    try:
+        p = subprocess.Popen([script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if stderr or not stdout:
+            return "-"  # tells C* not to look for libjemalloc
+        else:
+            return stdout
+    except Exception as exc:
+        print "Failed to run script to prelocate libjemalloc ({}): {}".format(script, exc)
+        return ""
+
+CASSANDRA_LIBJEMALLOC = find_libjemalloc()
 
 
 class expect_control_connection_failures(object):
@@ -270,6 +294,7 @@ class Tester(TestCase):
             cluster.set_configuration_options(values={'memtable_allocation_type': 'offheap_objects'})
 
         cluster.set_datadir_count(DATADIR_COUNT)
+        cluster.set_environment_variable('CASSANDRA_LIBJEMALLOC', CASSANDRA_LIBJEMALLOC)
 
         return cluster
 
@@ -468,6 +493,7 @@ class Tester(TestCase):
     Finds files matching the glob pattern specified as argument on
     the given keyspace in all nodes
     """
+
     def glob_data_dirs(self, path, ks="ks"):
         result = []
         for node in self.cluster.nodelist():
@@ -648,11 +674,11 @@ class Tester(TestCase):
             # we assume simpleStrategy
             session.execute(query % (name, "'class':'SimpleStrategy', 'replication_factor':%d" % rf))
         else:
-            assert len(rf) != 0, "At least one datacenter/rf pair is needed"
+            self.assertGreaterEqual(len(rf), 0, "At least one datacenter/rf pair is needed")
             # we assume networkTopologyStrategy
             options = (', ').join(['\'%s\':%d' % (d, r) for d, r in rf.iteritems()])
             session.execute(query % (name, "'class':'NetworkTopologyStrategy', %s" % options))
-        session.execute('USE %s' % name)
+        session.execute('USE {}'.format(name))
 
     # We default to UTF8Type because it's simpler to use in tests
     def create_cf(self, session, name, key_type="varchar", speculative_retry=None, read_repair=None, compression=None,
@@ -661,7 +687,7 @@ class Tester(TestCase):
         additional_columns = ""
         if columns is not None:
             for k, v in columns.items():
-                additional_columns = "%s, %s %s" % (additional_columns, k, v)
+                additional_columns = "{}, {} {}".format(additional_columns, k, v)
 
         if additional_columns == "":
             query = 'CREATE COLUMNFAMILY %s (key %s, c varchar, v varchar, PRIMARY KEY(key, c)) WITH comment=\'test cf\'' % (name, key_type)

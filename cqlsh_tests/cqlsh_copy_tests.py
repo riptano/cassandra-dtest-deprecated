@@ -9,6 +9,7 @@ import time
 from collections import namedtuple
 from contextlib import contextmanager
 from decimal import Decimal
+from distutils.version import LooseVersion
 from functools import partial
 from tempfile import NamedTemporaryFile, gettempdir, template
 from uuid import uuid1, uuid4
@@ -353,7 +354,7 @@ class CqlshCopyTest(Tester):
                 return format_value_default(nullval, colormap=NO_COLOR_MAP)
 
             # CASSANDRA-11255 increased COPY TO DOUBLE PRECISION TO 12
-            if cql_type_name == 'double' and self.cluster.version() >= '3.6':
+            if cql_type_name == 'double' and LooseVersion(self.cluster.version()) >= LooseVersion('3.6'):
                 float_precision = 12
             else:
                 float_precision = 5
@@ -430,6 +431,9 @@ class CqlshCopyTest(Tester):
 
         self.assertCsvResultEqual(tempfile.name, results, 'testlist')
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def test_tuple_data(self):
         """
         Tests the COPY TO command with the tuple datatype by:
@@ -816,6 +820,9 @@ class CqlshCopyTest(Tester):
         self.assertItemsEqual(self.result_to_csv_rows(exported_results, cql_type_names, time_format=format),
                               self.result_to_csv_rows(imported_results, cql_type_names, time_format=format))
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12059',
+                   flaky=True)
     @since('3.2')
     def test_reading_with_ttl(self):
         """
@@ -1056,6 +1063,9 @@ class CqlshCopyTest(Tester):
 
         self.assertItemsEqual(csv_values, result)
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def test_reading_max_parse_errors(self):
         """
         Test that importing a csv file is aborted when we reach the maximum number of parse errors:
@@ -1162,9 +1172,6 @@ class CqlshCopyTest(Tester):
         do_test(100, 50)
         do_test(50, 50)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11732',
-                   flaky=True)
     def test_reading_with_parse_errors(self):
         """
         Test importing a CSV file where not all rows can be parsed:
@@ -1418,6 +1425,9 @@ class CqlshCopyTest(Tester):
 
         assert_csvs_items_equal(tempfile.name, reference_file.name)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12067',
+                   flaky=True)
     def test_explicit_column_order_reading(self):
         """
         Test that COPY can write to a CSV file when the order of columns is
@@ -1547,6 +1557,9 @@ class CqlshCopyTest(Tester):
 
             assert_csvs_items_equal(tempfile.name, reference_file.name)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12070',
+                   flaky=True)
     def test_data_validation_on_read_template(self):
         """
         Test that reading from CSV files fails when there is a type mismatch
@@ -1612,6 +1625,9 @@ class CqlshCopyTest(Tester):
                 self.assertFalse(err)
                 self.assertCsvResultEqual(tempfile.name, results, 'testvalidate')
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     @since('2.2')
     def test_read_wrong_column_names(self):
         """
@@ -1752,13 +1768,14 @@ class CqlshCopyTest(Tester):
 
             imported_results = list(self.session.execute("SELECT * FROM testdatatype"))
 
-            assert len(imported_results) == 1
-
             self.assertEqual(exported_results, imported_results)
 
         _test(True)
         _test(False)
 
+    @known_failure(failure_source='cassandra',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def test_boolstyle_round_trip(self):
         """
         Test that a CSV file with booleans in a different style successfully round-trips
@@ -1794,7 +1811,6 @@ class CqlshCopyTest(Tester):
                                  .format(tempfile.name, trueval, falseval))
 
             imported_results = list(self.session.execute("SELECT * FROM testbooleans"))
-            assert len(imported_results) == 2
             self.assertEqual(exported_results, imported_results)
 
         self.prepare()
@@ -1910,8 +1926,8 @@ class CqlshCopyTest(Tester):
 
             # comma as thousands sep and dot as decimal sep
             # the precision for double values was increased from 5 to 12 in 3.6, see CASSANDRA-11255
-            double_val_1 = '5.12346' if self.cluster.version() < '3.6' else '5.12345678'
-            double_val_2 = '123,456,789.56' if self.cluster.version() < '3.6' else '123,456,789.560000002384'
+            double_val_1 = '5.12346' if LooseVersion(self.cluster.version()) < LooseVersion('3.6') else '5.12345678'
+            double_val_2 = '123,456,789.56' if LooseVersion(self.cluster.version()) < LooseVersion('3.6') else '123,456,789.560000002384'
             expected_vals_usual = [
                 ['0', '10', '10', '10', '10', '10', '10', '10', '10'],
                 ['1', '127', '255', '1,000', '1,000', '1,000', '5.5', '5.5', double_val_1],
@@ -1924,8 +1940,8 @@ class CqlshCopyTest(Tester):
             ]
 
             # dot as thousands sep and comma as decimal sep
-            double_val_1 = '5,12346' if self.cluster.version() < '3.6' else '5,12345678'
-            double_val_2 = '123.456.789,56' if self.cluster.version() < '3.6' else '123.456.789,560000002384'
+            double_val_1 = '5,12346' if LooseVersion(self.cluster.version()) < LooseVersion('3.6') else '5,12345678'
+            double_val_2 = '123.456.789,56' if LooseVersion(self.cluster.version()) < LooseVersion('3.6') else '123.456.789,560000002384'
             expected_vals_inverted = [
                 ['0', '10', '10', '10', '10', '10', '10', '10', '10'],
                 ['1', '127', '255', '1.000', '1.000', '1.000', '5,5', '5,5', double_val_1],
@@ -2003,6 +2019,9 @@ class CqlshCopyTest(Tester):
                                ['3', '1943-06-19 11:21:01.124+0000']],
                               csv_results)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12061',
+                   flaky=True)
     @since('3.6')
     def test_round_trip_with_different_number_precision(self):
         """
@@ -2057,6 +2076,9 @@ class CqlshCopyTest(Tester):
         do_test(5, 12)
         do_test(5, 15)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12072',
+                   flaky=True)
     def test_round_trip_with_num_processes(self):
         """
         Test exporting a large number of rows into a csv file with a fixed number of child processes.
@@ -2140,6 +2162,9 @@ class CqlshCopyTest(Tester):
 
         check_rate_file()
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12069',
+                   flaky=True)
     def test_copy_options_from_config_file(self):
         """
         Test that we can specify configuration options in a config file, optionally using multiple sections,
@@ -2496,9 +2521,6 @@ class CqlshCopyTest(Tester):
                                    stress_table='stresscql.blogposts',
                                    copy_to_options={'PAGETIMEOUT': 60, 'PAGESIZE': 1000})
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11800',
-                   flaky=True)
     @freshCluster()
     def test_bulk_round_trip_blogposts_with_max_connections(self):
         """
@@ -2556,7 +2578,7 @@ class CqlshCopyTest(Tester):
         """
         os.environ['CQLSH_COPY_TEST_NUM_CORES'] = '1'
         ret = self._test_bulk_round_trip(nodes=3, partitioner="murmur3", num_operations=100000)
-        if self.cluster.version() >= '3.6':
+        if LooseVersion(self.cluster.version()) >= LooseVersion('3.6'):
             debug('Checking that number of cores detected is correct')
             for out, _ in ret:
                 self.assertIn("Detected 1 core", out)
@@ -2589,10 +2611,17 @@ class CqlshCopyTest(Tester):
             start = tokens[1]
             end = tokens[2]
         else:
-            start = 0
-            end = 5000000000000000000
             self.prepare(nodes=1)
+            metadata = self.session.cluster.metadata
+            metadata.token_map.rebuild_keyspace(self.ks, build_if_absent=True)
+            ring = [t.value for t in metadata.token_map.tokens_to_hosts_by_ks[self.ks].keys()]
+            self.assertGreaterEqual(len(ring), 3, 'Not enough ranges in the ring for this test')
+            ring.sort()
+            idx = len(ring) / 2
+            start = ring[idx]
+            end = ring[idx + 1]
 
+        debug("Using failure range: {}, {}".format(start, end))
         return start, end
 
     @freshCluster()
@@ -2658,9 +2687,6 @@ class CqlshCopyTest(Tester):
         self.assertNotIn('some records might be missing', err)
         self.assertEqual(num_records, len(open(tempfile.name).readlines()))
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12024',
-                   flaky=True)
     @freshCluster()
     def test_copy_to_with_child_process_crashing(self):
         """
@@ -2806,10 +2832,6 @@ class CqlshCopyTest(Tester):
         num_records_imported = rows_to_list(self.session.execute("SELECT COUNT(*) FROM {}".format(stress_table)))[0][0]
         self.assertTrue(num_records_imported < num_records)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11676',
-                   flaky=True,
-                   notes='failed once on trunk offheap')
     @since('2.2.5')
     @freshCluster()
     def test_copy_from_with_large_cql_rows(self):

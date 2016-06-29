@@ -82,9 +82,6 @@ class TestPushedNotifications(Tester):
     """
     Tests for pushed native protocol notification from Cassandra.
     """
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11731',
-                   flaky=True)
     @no_vnodes()
     def move_single_node_test(self):
         """
@@ -217,6 +214,7 @@ class TestPushedNotifications(Tester):
         notifications = waiter.wait_for_notifications(timeout=30.0, num_notifications=2)
         self.assertEquals(0, len(notifications), notifications)
 
+    @since("2.2")
     def add_and_remove_node_test(self):
         """
         Test that NEW_NODE and REMOVED_NODE are sent correctly as nodes join and leave.

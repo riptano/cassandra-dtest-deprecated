@@ -3,9 +3,9 @@ Home for upgrade-related tests that don't fit in with the core upgrade testing i
 """
 from cassandra import ConsistencyLevel as CL
 
-from tools import known_failure
 from upgrade_base import UPGRADE_TEST_RUN, UpgradeTester
 from upgrade_manifest import build_upgrade_pairs
+from nose.tools import assert_not_in
 
 
 class TestForRegressions(UpgradeTester):
@@ -14,9 +14,6 @@ class TestForRegressions(UpgradeTester):
     """
     NODES, RF, __test__, CL = 2, 1, False, CL.ONE
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11291',
-                   flaky=False)
     def test_10822(self):
         """
         @jira_ticket CASSANDRA-10822
@@ -63,7 +60,7 @@ class TestForRegressions(UpgradeTester):
 
 for path in build_upgrade_pairs():
     gen_class_name = TestForRegressions.__name__ + path.name
-    assert gen_class_name not in globals(), gen_class_name
+    assert_not_in(gen_class_name, globals())
     spec = {'UPGRADE_PATH': path,
             '__test__': UPGRADE_TEST_RUN}
     globals()[gen_class_name] = type(gen_class_name, (TestForRegressions,), spec)

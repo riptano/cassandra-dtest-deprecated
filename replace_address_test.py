@@ -7,6 +7,7 @@ from cassandra import ConsistencyLevel, ReadTimeout, Unavailable
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node, NodeError
 
+from assertions import assert_one
 from dtest import DISABLE_VNODES, Tester, debug
 from tools import InterruptBootstrap, known_failure, since
 
@@ -343,6 +344,10 @@ class TestReplaceAddress(Tester):
                 node3.watch_log_for('To perform this operation, please restart with -Dcassandra.allow_unsafe_replace=true',
                                     from_mark=mark, timeout=20)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12085',
+                   flaky=True,
+                   notes='windows')
     @since('2.2')
     def resumable_replace_test(self):
         """
@@ -390,9 +395,8 @@ class TestReplaceAddress(Tester):
 
         # check if 2nd bootstrap succeeded
         session = self.exclusive_cql_connection(node4)
-        rows = list(session.execute("SELECT bootstrapped FROM system.local WHERE key='local'"))
-        assert len(rows) == 1
-        assert rows[0][0] == 'COMPLETED', rows[0][0]
+        queryTwo = "SELECT bootstrapped FROM system.local WHERE key='local'"
+        assert_one(session, queryTwo, ['COMPLETED'])
 
         # query should work again
         debug("Verifying querying works again.")
@@ -448,9 +452,8 @@ class TestReplaceAddress(Tester):
 
         # check if 2nd bootstrap succeeded
         session = self.exclusive_cql_connection(node4)
-        rows = list(session.execute("SELECT bootstrapped FROM system.local WHERE key='local'"))
-        assert len(rows) == 1
-        assert rows[0][0] == 'COMPLETED', rows[0][0]
+        queryTwo = "SELECT bootstrapped FROM system.local WHERE key='local'"
+        assert_one(session, queryTwo, ['COMPLETED'])
 
         # query should work again
         debug("Verifying querying works again.")
