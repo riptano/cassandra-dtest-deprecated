@@ -2502,23 +2502,29 @@ class TestAuthRoles(Tester):
             node = self.cluster.nodelist()[0]
             self.cql_connection(node, user=user, password=password)
         host, error = response.exception.errors.popitem()
+
         message = "Provided username {user} and/or password are incorrect".format(user=user)\
             if LooseVersion(node.cluster.version()) >= LooseVersion('3.10') \
             else "Username and/or password are incorrect"
         pattern = 'Failed to authenticate to {host}: Error from server: code=0100 ' \
                   '\[Bad credentials\] message="{message}"'.format(host=host, message=message)
-        assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got %s" % error
-        assert re.search(pattern, error.message), "Expected: %s, actual: %s" % (pattern, error.message)
+
+        assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
+        assert re.search(pattern, error.message), \
+            "Expected: {expected}, actual: {actual}".format(expected=pattern, actual=error.message)
 
     def assert_login_not_allowed(self, user, password):
         with self.assertRaises(NoHostAvailable) as response:
             node = self.cluster.nodelist()[0]
             self.cql_connection(node, user=user, password=password)
         host, error = response.exception.errors.popitem()
+
         pattern = 'Failed to authenticate to {host}: Error from server: code=0100 ' \
                   '\[Bad credentials\] message="{user} is not permitted to log in"'.format(host=host, user=user)
-        assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got %s" % error
-        assert re.search(pattern, error.message), "Expected: %s, actual: %s" % (pattern, error.message)
+
+        assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
+        assert re.search(pattern, error.message), \
+            "Expected: {expected}, actual: {actual}".format(expected=pattern, actual=error.message)
 
     def get_session(self, node_idx=0, user=None, password=None):
         """
