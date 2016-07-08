@@ -942,22 +942,24 @@ class TestAuth(Tester):
 
         with JolokiaAgent(node) as jmx:
             success = jmx.read_attribute(
-                make_mbean('metrics', type='Auth', scope='AuthResponse', name='success'), 'Count')
+                make_mbean('metrics', type='Client', name='AuthSuccess'), 'Count')
             failure = jmx.read_attribute(
-                make_mbean('metrics', type='Auth', scope='AuthResponse', name='failure'), 'Count')
+                make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
             assert success == 0
             assert failure == 0
 
             try:
                 self.get_session(user='cassandra', password='wrong_password')
-            except:
-                self.get_session(user='cassandra', password='cassandra')
+            except NoHostAvailable as e:
+                self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
+
+            self.get_session(user='cassandra', password='cassandra')
 
             success = jmx.read_attribute(
-                make_mbean('metrics', type='Auth', scope='AuthResponse', name='success'), 'Count')
+                make_mbean('metrics', type='Client', name='AuthSuccess'), 'Count')
             failure = jmx.read_attribute(
-                make_mbean('metrics', type='Auth', scope='AuthResponse', name='failure'), 'Count')
+                make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
             assert success > 0
             assert failure > 0
