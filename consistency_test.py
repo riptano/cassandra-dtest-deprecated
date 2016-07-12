@@ -381,7 +381,7 @@ class TestAccuracy(TestHelper):
             self.serial_cl = serial_cl
 
             outer.log('Testing accuracy with WRITE/READ/SERIAL consistency set to {}/{}/{} (keys : {} to {})'
-                      .format(consistency_value_to_name(write_cl)), consistency_value_to_name(read_cl), consistency_value_to_name(serial_cl), start, end - 1)
+                      .format(consistency_value_to_name(write_cl), consistency_value_to_name(read_cl), consistency_value_to_name(serial_cl), start, end - 1))
 
         def get_num_nodes(self, idx):
             """
