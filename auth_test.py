@@ -921,7 +921,7 @@ class TestAuth(Tester):
         assert_unauthorized(cathy, "SELECT * FROM ks.cf", "User cathy has no SELECT permission on <table ks.cf> or any of its parents")
         philip.execute("SELECT * FROM ks.cf")
 
-    @since('3.8')
+    @since('3.10')
     def auth_metrics_test(self):
         """
         Success and failure metrics were added to the authentication procedure
