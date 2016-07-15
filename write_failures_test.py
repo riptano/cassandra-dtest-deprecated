@@ -108,7 +108,7 @@ class TestWriteFailures(Tester):
         self.protocol_version = 4
         self._perform_cql_statement("INSERT INTO mytable (key, value) VALUES ('key1', 'Value 1')")
 
-    @known_failure(failure_source='test',
+    @known_failure(failure_source='cassandra',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12213',
                    flaky=True)
     def test_mutation_any(self):
@@ -162,14 +162,13 @@ class TestWriteFailures(Tester):
                 where key = {uuid}
         """.format(uuid=_id))
 
-
     def test_paxos(self):
         """
         A light transaction receives a WriteFailure
         """
         self._perform_cql_statement("INSERT INTO mytable (key, value) VALUES ('key1', 'Value 1') IF NOT EXISTS")
 
-    @known_failure(failure_source='test',
+    @known_failure(failure_source='cassandra',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12213',
                    flaky=True)
     def test_paxos_any(self):
