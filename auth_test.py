@@ -946,8 +946,8 @@ class TestAuth(Tester):
             failure = jmx.read_attribute(
                 make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
-            assert success == 0
-            assert failure == 0
+            self.assertEqual(0, success)
+            self.assertEqual(0, failure)
 
             try:
                 self.get_session(user='cassandra', password='wrong_password')
@@ -961,8 +961,8 @@ class TestAuth(Tester):
             failure = jmx.read_attribute(
                 make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
-            assert success > 0
-            assert failure > 0
+            self.assertTrue(success > 0)
+            self.assertTrue(failure > 0)
 
     def prepare(self, nodes=1, permissions_validity=0):
         """
