@@ -961,8 +961,8 @@ class TestAuth(Tester):
             failure = jmx.read_attribute(
                 make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
-            self.assertTrue(success > 0)
-            self.assertTrue(failure > 0)
+            self.assertGreater(success, 0)
+            self.assertGreater(failure, 0)
 
     def prepare(self, nodes=1, permissions_validity=0):
         """
