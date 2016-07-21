@@ -8,7 +8,7 @@ from ccmlib.node import ToolError
 from dtest import Tester, debug
 from jmxutils import JolokiaAgent, enable_jmx_ssl, make_mbean, remove_perf_disable_shared_mem
 from tools import known_failure, since, generate_ssl_stores
-
+import parse
 
 class TestJMX(Tester):
 
@@ -130,7 +130,24 @@ class TestJMX(Tester):
 
             updated_progress_string = jmx.read_attribute(compaction_manager, 'CompactionSummary')[0]
 
-            progress = int(re.search('standard1, (\d+)\/', progress_string).groups()[0])
+            # progress = int(re.search('standard1, (\d+)\/', progress_string).groups()[0])
+            progress = parse.search("'%s', '{:d}/'" % ('Compaction@faa79a00-4d4c-11e6-b83d-2f250f8eb53f(keyspace1, standard1, 1917359/11496370)bytes'), progress_string).fixed[0]
+            # progress = parse.search("'%s', '{:d}/'" % ('standard1'), progress_string).fixed[0]
+            # progress_string = Compaction@faa79a00-4d4c-11e6-b83d-2f250f8eb53f(keyspace1, standard1, 1917359/11496370)bytes
+            # progress is :
+            # 1917359
+            print "progress is : "
+            print progress
+            print "progress_string is: "
+            print progress_string
+            print "compaction_manager is: "
+            print compaction_manager
+            print "updated_progress_string is: "
+            print updated_progress_string
+            # chunk_length = int(re.search("{chunk}.*?:.*?'(\d*?)'".format(chunk=chunk_string), result).groups()[0])
+            #progress = parse.search("'%s': '{:d}'" % ('standard1'), progress_string).fixed[0]
+            #chunk_length = parse.search("'%s': '{:d}'" % (chunk_string), result).fixed[0]
+            ##=====no gap between this and above
             updated_progress = int(re.search('standard1, (\d+)\/', updated_progress_string).groups()[0])
 
             debug(progress_string)
