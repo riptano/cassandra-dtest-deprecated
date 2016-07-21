@@ -5,6 +5,7 @@ from cassandra.concurrent import execute_concurrent_with_args
 
 from dtest import Tester, debug
 from jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
+import parse
 
 
 class TestConfiguration(Tester):
@@ -131,7 +132,31 @@ class TestConfiguration(Tester):
 
         self.assertNotEqual(params, '', "Looking for the string 'sstable_compression', but could not find it in {str}".format(str=result))
         chunk_string = "chunk_length_kb" if self.cluster.version() < '3.0' else "chunk_length_in_kb"
-        chunk_length = int(re.search("{chunk}.*?:.*?'(\d*?)'".format(chunk=chunk_string), result).groups()[0])
+        # starting here: result and chunk_string each have some particular value
+        # print 'original chunk_string is: ' + chunk_string
+        print 'original result is: ' + result
+
+        #chunk_length = parse('{:d}', chunk_string, result).groups()[0]
+        #chunk_length = parse('{:d}', chunk_string, result).groups()[0]
+        # chunk_length = parse('{chunk_string}', '{:d}',  )
+        # chunk_str = chunk_string
+        # chunk_length = int(re.search("{chunk}.*?:.*?'(\d*?)'".format(chunk=chunk_string), result).groups()[0])
+        # 'chunk_length_in_kb': '32',
+        # do not change this to .format or it will break
+        chunk_length = parse.search("'%s': '{:d}'" % (chunk_string), result).fixed[0]
+        # now, chunk_length has a value extracted from result
+        # so, reimplement the `re.search` code above using `parse.parse` so that it produces
+        # the same value for chunk_length
+        #parse('Our {:d} {:w} are...', 'Our 3 weapons are...')
+
+        #chunk_length = parse(re.search())
+        print 'chunk_length is : '
+        print chunk_length
+        # print 'chunk_string is ' + chunk_string
+        print 'result is ' + result
+        # chuck_length = (re.search("(.*?)", 'compression').groups()[0])
+        # r = parse("The {} who say {}", "The knights who say Ni!")
+        # chuck_length = parse(re.search("(.*?", ))
         self.assertEqual(chunk_length, value, "Expected chunk_length: {}.  We got: {}".format(value, chunk_length))
 
 
