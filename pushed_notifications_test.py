@@ -1,5 +1,6 @@
 import time
 from datetime import datetime
+from distutils.version import LooseVersion
 from threading import Event
 
 from cassandra import ConsistencyLevel as CL
@@ -169,7 +170,10 @@ class TestPushedNotifications(Tester):
         waiter.wait_for_notifications(timeout=30, num_notifications=2)
         waiter.clear_notifications()
 
-        expected_notifications = 2 if self.cluster.cassandra_version() >= '2.2' else 3
+        # On versions prior to 2.2, an additional NEW_NODE notification is sent when a node
+        # is restarted. This bug was fixed in CASSANDRA-11038 (see also CASSANDRA-11360)
+        version = LooseVersion(self.cluster.cassandra_version())
+        expected_notifications = 2 if version >= '2.2' else 3
         for i in range(5):
             debug("Restarting second node...")
             node2.stop(wait_other_notice=True)
@@ -181,7 +185,7 @@ class TestPushedNotifications(Tester):
                 self.assertEquals(self.get_ip_from_node(node2), notification["address"][0])
             self.assertEquals("DOWN", notifications[0]["change_type"])
             self.assertEquals("UP", notifications[1]["change_type"])
-            if self.cluster.cassandra_version() < '2.2':
+            if version < '2.2':
                 self.assertEquals("NEW_NODE", notifications[2]["change_type"])
             waiter.clear_notifications()
 
