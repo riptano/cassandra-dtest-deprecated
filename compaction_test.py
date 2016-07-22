@@ -513,24 +513,24 @@ class TestCompaction(Tester):
         for x in range(15, 20):
             for y in range(0, 5):
                 session.execute('delete val from cf where key = ' + str(x) + ' and subkey = ' + str(y) + ' and column = ' + str(y))
-        rowcount = 21 * 6 - 5 * 6 - 5 * 5 - 5 * 5;
+        rowcount = 21 * 6 - 5 * 6 - 5 * 5 - 5 * 5
         node1.flush()
 
-        assert_row_count(session, "cf", rowcount);
-        table = rows_to_list(session.execute("select * from cf"));
-        size = data_size(node1, "cf");
+        assert_row_count(session, "cf", rowcount)
+        table = rows_to_list(session.execute("select * from cf"))
+        size = data_size(node1, "cf")
 
-        node1.nodetool("garbagecollect");
-        assert_row_count(session, "cf", rowcount);
+        node1.nodetool("garbagecollect")
+        assert_row_count(session, "cf", rowcount)
         self.assertEqual(table, rows_to_list(session.execute("select * from cf")))
-        row_gc_size = data_size(node1, "cf");
-        self.assertLess(row_gc_size, size);
+        row_gc_size = data_size(node1, "cf")
+        self.assertLess(row_gc_size, size)
 
-        node1.nodetool("garbagecollect -g CELL");
-        assert_row_count(session, "cf", rowcount);
+        node1.nodetool("garbagecollect -g CELL")
+        assert_row_count(session, "cf", rowcount)
         self.assertEqual(table, rows_to_list(session.execute("select * from cf")))
-        cell_gc_size = data_size(node1, "cf");
-        self.assertLess(cell_gc_size, row_gc_size);
+        cell_gc_size = data_size(node1, "cf")
+        self.assertLess(cell_gc_size, row_gc_size)
 
     def skip_if_no_major_compaction(self):
         if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':
@@ -601,11 +601,6 @@ def stress_write(node, keycount=100000):
     node.stress(['write', 'n={keycount}'.format(keycount=keycount)])
 
 
-strategies = ['LeveledCompactionStrategy', 'SizeTieredCompactionStrategy', 'DateTieredCompactionStrategy']
-for strategy in strategies:
-    cls_name = ('TestCompaction_with_' + strategy)
-    vars()[cls_name] = type(cls_name, (TestCompaction,), {'strategy': strategy, '__test__': True})
-
 def data_size(node, table_name):
     output = node.nodetool('cfstats', True)[0]
     if output.find(table_name) != -1:
@@ -615,4 +610,10 @@ def data_size(node, table_name):
     else:
         debug("datasize not found")
         debug(output)
-        assert false;
+        assert false
+
+
+strategies = ['LeveledCompactionStrategy', 'SizeTieredCompactionStrategy', 'DateTieredCompactionStrategy']
+for strategy in strategies:
+    cls_name = ('TestCompaction_with_' + strategy)
+    vars()[cls_name] = type(cls_name, (TestCompaction,), {'strategy': strategy, '__test__': True})
