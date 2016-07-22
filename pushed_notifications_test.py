@@ -164,22 +164,25 @@ class TestPushedNotifications(Tester):
         waiter = NotificationWaiter(self, node1, ["STATUS_CHANGE", "TOPOLOGY_CHANGE"])
 
         # need to block for up to 2 notifications (NEW_NODE and UP) so that these notifications
-        # don't confuse the state below
+        # don't confuse the state below.
         debug("Waiting for unwanted notifications...")
         waiter.wait_for_notifications(timeout=30, num_notifications=2)
         waiter.clear_notifications()
 
+        expected_notifications = 2 if self.cluster.cassandra_version() >= '2.2' else 3
         for i in range(5):
             debug("Restarting second node...")
             node2.stop(wait_other_notice=True)
             node2.start(wait_other_notice=True)
             debug("Waiting for notifications from {}".format(waiter.address))
-            notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-            self.assertEquals(2, len(notifications), notifications)
+            notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=expected_notifications)
+            self.assertEquals(expected_notifications, len(notifications), notifications)
             for notification in notifications:
                 self.assertEquals(self.get_ip_from_node(node2), notification["address"][0])
             self.assertEquals("DOWN", notifications[0]["change_type"])
             self.assertEquals("UP", notifications[1]["change_type"])
+            if self.cluster.cassandra_version() < '2.2':
+                self.assertEquals("NEW_NODE", notifications[2]["change_type"])
             waiter.clear_notifications()
 
     def restart_node_localhost_test(self):
