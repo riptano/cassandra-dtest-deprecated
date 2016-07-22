@@ -9,6 +9,7 @@ from jmxutils import JolokiaAgent, enable_jmx_ssl, make_mbean, remove_perf_disab
 from tools import known_failure, since, generate_ssl_stores
 import parse
 
+
 class TestJMX(Tester):
 
     @known_failure(failure_source='test',
