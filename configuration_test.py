@@ -135,8 +135,8 @@ class TestConfiguration(Tester):
         # print 'original chunk_string is: ' + chunk_string
         print 'original result is: ' + result
 
-        #chunk_length = parse('{:d}', chunk_string, result).groups()[0]
-        #chunk_length = parse('{:d}', chunk_string, result).groups()[0]
+        # chunk_length = parse('{:d}', chunk_string, result).groups()[0]
+        # chunk_length = parse('{:d}', chunk_string, result).groups()[0]
         # chunk_length = parse('{chunk_string}', '{:d}',  )
         # chunk_str = chunk_string
         # chunk_length = int(re.search("{chunk}.*?:.*?'(\d*?)'".format(chunk=chunk_string), result).groups()[0])
@@ -146,9 +146,9 @@ class TestConfiguration(Tester):
         # now, chunk_length has a value extracted from result
         # so, reimplement the `re.search` code above using `parse.parse` so that it produces
         # the same value for chunk_length
-        #parse('Our {:d} {:w} are...', 'Our 3 weapons are...')
+        # parse('Our {:d} {:w} are...', 'Our 3 weapons are...')
 
-        #chunk_length = parse(re.search())
+        # chunk_length = parse(re.search())
         print 'chunk_length is : '
         print chunk_length
         # print 'chunk_string is ' + chunk_string
