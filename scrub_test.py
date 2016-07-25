@@ -5,6 +5,7 @@ import subprocess
 import time
 import uuid
 
+import parse
 from ccmlib import common
 from assertions import assert_length_equal
 
@@ -169,9 +170,8 @@ class TestHelper(Tester):
         generations by that amount.
         """
         for table_or_index, table_sstables in sstables.items():
-            increment_by = len(set(re.match('.*(\d)[^0-9].*', s).group(1) for s in table_sstables))
+            increment_by = len(set(parse.search('{stuff}-{:S}-{:d}-{suffix}.{file_extention}', s).fixed[1] for s in table_sstables))
             sstables[table_or_index] = [self.increment_generation_by(s, increment_by) for s in table_sstables]
-
         debug('sstables after increment {}'.format(str(sstables)))
 
 
