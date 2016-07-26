@@ -2536,8 +2536,7 @@ class TestAuthRoles(Tester):
                   '\[Bad credentials\] message="{message}"'.format(host=host, message=message)
 
         assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
-        assert re.search(pattern, error.message), \
-            "Expected: {expected}, actual: {actual}".format(expected=pattern, actual=error.message)
+        self.assertIn(pattern, error.message)
 
     def assert_login_not_allowed(self, user, password):
         with self.assertRaises(NoHostAvailable) as response:
@@ -2549,8 +2548,7 @@ class TestAuthRoles(Tester):
                   '\[Bad credentials\] message="{user} is not permitted to log in"'.format(host=host, user=user)
 
         assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
-        assert re.search(pattern, error.message), \
-            "Expected: {expected}, actual: {actual}".format(expected=pattern, actual=error.message)
+        self.assertIn(pattern, error.message)
 
     def get_session(self, node_idx=0, user=None, password=None):
         """
