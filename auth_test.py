@@ -1,4 +1,3 @@
-import re
 import time
 from collections import namedtuple
 from distutils.version import LooseVersion
