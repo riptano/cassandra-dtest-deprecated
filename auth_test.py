@@ -2533,7 +2533,7 @@ class TestAuthRoles(Tester):
             if LooseVersion(node.cluster.version()) >= LooseVersion('3.10') \
             else "Username and/or password are incorrect"
         pattern = 'Failed to authenticate to {host}: Error from server: code=0100 ' \
-                  '\[Bad credentials\] message="{message}"'.format(host=host, message=message)
+                  '[Bad credentials] message="{message}"'.format(host=host, message=message)
 
         assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
         self.assertIn(pattern, error.message)
@@ -2545,7 +2545,7 @@ class TestAuthRoles(Tester):
         host, error = response.exception.errors.popitem()
 
         pattern = 'Failed to authenticate to {host}: Error from server: code=0100 ' \
-                  '\[Bad credentials\] message="{user} is not permitted to log in"'.format(host=host, user=user)
+                  '[Bad credentials] message="{user} is not permitted to log in"'.format(host=host, user=user)
 
         assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
         self.assertIn(pattern, error.message)
