@@ -5,9 +5,9 @@ import re
 import subprocess
 import time
 
+import parse
 from cassandra.util import sortedset
 from ccmlib import common
-import parse
 
 from dtest import Tester, debug, DISABLE_VNODES
 from tools import rows_to_list, since
@@ -15,7 +15,6 @@ from tools import rows_to_list, since
 
 @since('2.0.16', max_version='3.0.0')
 class TestTokenGenerator(Tester):
-
     """
     Basic tools/bin/token-generator test.
     Token-generator was removed in CASSANDRA-5261
