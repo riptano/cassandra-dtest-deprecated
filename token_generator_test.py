@@ -7,6 +7,7 @@ import time
 
 from cassandra.util import sortedset
 from ccmlib import common
+import parse
 
 from dtest import Tester, debug, DISABLE_VNODES
 from tools import rows_to_list, since
@@ -14,6 +15,7 @@ from tools import rows_to_list, since
 
 @since('2.0.16', max_version='3.0.0')
 class TestTokenGenerator(Tester):
+
     """
     Basic tools/bin/token-generator test.
     Token-generator was removed in CASSANDRA-5261
@@ -27,7 +29,6 @@ class TestTokenGenerator(Tester):
             executable += ".bat"
 
         args = [executable]
-
         if randomPart is not None:
             if randomPart:
                 args.append("--random")
@@ -50,10 +51,10 @@ class TestTokenGenerator(Tester):
                 dc_tokens = []
             else:
                 if line.__len__() > 0:
-                    m = re.search("^  Node #(\d+): [ ]*([-]?\d+)$", line)
+                    m = parse.search('Node #{:d}:{:s}{:d}', line)
                     self.assertIsNotNone(m, "Line \"%r\" does not match pattern from token-generator %r" % (line, args))
-                    node_num = int(m.group(1))
-                    node_token = int(m.group(2))
+                    node_num = int(m.fixed[0])
+                    node_token = int(m.fixed[2])
                     dc_tokens.append(node_token)
                     self.assertEqual(node_num, dc_tokens.__len__(), "invalid token count from token-generator %r" % args)
         self.assertIsNotNone(dc_tokens, "No tokens from token-generator %r" % args)
@@ -66,7 +67,6 @@ class TestTokenGenerator(Tester):
         cluster = self.cluster
 
         install_dir = cluster.get_install_dir()
-
         generated_tokens = self.call_token_generator(install_dir, randomPart, [nodes])
 
         if not randomPart:
