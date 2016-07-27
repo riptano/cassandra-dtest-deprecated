@@ -5,7 +5,6 @@ import subprocess
 import time
 import uuid
 
-import parse
 from ccmlib import common
 
 from assertions import assert_length_equal
