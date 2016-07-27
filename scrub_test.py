@@ -7,8 +7,8 @@ import uuid
 
 import parse
 from ccmlib import common
-from assertions import assert_length_equal
 
+from assertions import assert_length_equal
 from dtest import Tester, debug
 from tools import known_failure, since
 
@@ -170,7 +170,7 @@ class TestHelper(Tester):
         generations by that amount.
         """
         for table_or_index, table_sstables in sstables.items():
-            increment_by = len(set(parse.search('{stuff}-{:S}-{:d}-{suffix}.{file_extention}', s).fixed[1] for s in table_sstables))
+            s
             sstables[table_or_index] = [self.increment_generation_by(s, increment_by) for s in table_sstables]
         debug('sstables after increment {}'.format(str(sstables)))
 
