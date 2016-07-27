@@ -100,6 +100,9 @@ class TestCompaction(Tester):
         # allow 5% size increase - if we have few sstables it is not impossible that live size increases *slightly* after compaction
         self.assertLess(finalValue, initialValue * 1.05)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12323',
+                   flaky=True)
     def bloomfilter_size_test(self):
         """
         @jira_ticket CASSANDRA-11344
@@ -250,6 +253,10 @@ class TestCompaction(Tester):
                                         '''.format(units), re.X)
 
         avgthroughput = re.match(throughput_pattern, stringline).group(1).strip()
+        print "throughput_patter is"
+        print throughput_pattern
+        print "avgthroughput"
+        print avgthroughput
         debug(avgthroughput)
 
         # The throughput in the log is computed independantly from the throttling and on the output files while
