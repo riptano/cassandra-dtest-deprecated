@@ -251,12 +251,7 @@ class TestCompaction(Tester):
                                            ([\s\d\.]*)  # capture a decimal number, possibly surrounded by whitespace
                                            {}.*         # followed by units
                                         '''.format(units), re.X)
-
         avgthroughput = re.match(throughput_pattern, stringline).group(1).strip()
-        print "throughput_patter is"
-        print throughput_pattern
-        print "avgthroughput"
-        print avgthroughput
         debug(avgthroughput)
 
         # The throughput in the log is computed independantly from the throttling and on the output files while
