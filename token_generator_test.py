@@ -7,7 +7,7 @@ import parse
 from cassandra.util import sortedset
 from ccmlib import common
 
-from dtest import Tester, debug, DISABLE_VNODES
+from dtest import DISABLE_VNODES, Tester, debug
 from tools import rows_to_list, since
 
 
