@@ -251,6 +251,7 @@ class TestCompaction(Tester):
                                            ([\s\d\.]*)  # capture a decimal number, possibly surrounded by whitespace
                                            {}.*         # followed by units
                                         '''.format(units), re.X)
+
         avgthroughput = re.match(throughput_pattern, stringline).group(1).strip()
         debug(avgthroughput)
 
