@@ -47,15 +47,17 @@ class RerunTestException(Exception):
 
 
 def index_is_built(table_name, idx_name):
-    index_query = (
-    """SELECT * FROM system_schema.indexes WHERE keyspace_name = 'ks' AND table_name = '{}' AND index_name = '{}'""".format(table_name, idx_name)
-   if self.cluster.version() > '3.0' else
-    """SELECT * FROM system."IndexInfo" WHERE table_name = 'ks' AND index_name = '{}.{}'""".format(table_name, idx_name)
+            index_query = (
+                """SELECT * FROM system_schema.indexes WHERE keyspace_name = 'ks' AND table_name = '{}' AND index_name = '{}'""".format(table_name, idx_name)
+                if self.cluster.version() > '3.0' else
+                """SELECT * FROM system."IndexInfo" WHERE table_name = 'ks' AND index_name = '{}.{}'""".format(table_name, idx_name)
             )
-           return len(list(session.execute(index_query))) == 1
+            return len(list(session.execute(index_query))) == 1
 
         start = time.time()
         while not index_is_built('regular_table', 'composites_index') and time.time() + 10 < start:
+            debug("waiting for index to build")
+            time.sleep(1)
 
 def requires_rerun(err, *args):
     """
