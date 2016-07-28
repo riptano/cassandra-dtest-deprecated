@@ -23,9 +23,6 @@ class TestRebuild(Tester):
         ]
         Tester.__init__(self, *args, **kwargs)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11687',
-                   flaky=True)
     def simple_rebuild_test(self):
         """
         @jira_ticket CASSANDRA-9119
@@ -95,7 +92,7 @@ class TestRebuild(Tester):
         node2.watch_log_for('All sessions completed', from_mark=mark)
         # check data
         for i in xrange(0, keys):
-            query_c1c2(session, i, ConsistencyLevel.ALL)
+            query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
 
     @since('3.6')
     def rebuild_ranges_test(self):
