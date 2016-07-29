@@ -47,7 +47,7 @@ class TestTokenGenerator(Tester):
                     generated_tokens.append(dc_tokens)
                 dc_tokens = []
             else:
-                if line.__len__() > 0:
+                if line:
                     m = parse.search('Node #{:d}:{:s}{:d}', line)
                     self.assertIsNotNone(m, "Line \"%r\" does not match pattern from token-generator %r" % (line, args))
                     node_num = int(m.fixed[0])
