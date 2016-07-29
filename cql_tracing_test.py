@@ -3,7 +3,7 @@
 from distutils.version import LooseVersion
 
 from dtest import Tester, debug
-from tools import since
+from tools import since, known_failure
 
 
 class TestCqlTracing(Tester):
@@ -103,6 +103,9 @@ class TestCqlTracing(Tester):
         session = self.prepare()
         self.trace(session)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12339t',
+                   flaky=True)
     @since('3.4')
     def tracing_unknown_impl_test(self):
         """
