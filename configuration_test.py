@@ -120,6 +120,8 @@ class TestConfiguration(Tester):
     def _check_chunk_length(self, session, value):
         result = session.cluster.metadata.keyspaces['ks'].tables['test_table'].as_cql_query()
         # Now extract the param list
+        print "result is:"
+        print result
         params = ''
 
         if self.cluster.version() < '3.0':
@@ -132,7 +134,22 @@ class TestConfiguration(Tester):
         self.assertNotEqual(params, '', "Looking for the string 'sstable_compression', but could not find it in {str}".format(str=result))
 
         chunk_string = "chunk_length_kb" if self.cluster.version() < '3.0' else "chunk_length_in_kb"
-        chunk_length = parse.search("'%s': '{:d}'" % (chunk_string), result).fixed[0]
+        # chunk_length = parse.search("'%s': '{:d}'" % (chunk_string), result).fixed[0]
+        # chunk_length = parse.search((chunk_string + ':''{:d}'), result).fixed[0]
+        chunk_length = parse.search("'" + chunk_string + "': '{:d}'", result).fixed[0]
+        # chunk_length = parse.search(" + chunk_string + : '{:d}'", result).fixed[1]
+        # chunk_length = parse.search("' + chunk_string +' : '{:d}'", result).fixed[1]
+        # print chunk_string
+        # print chunk_length
+        # chunk_length = parse.search(''+ chunk_string + ': ':d'', result).fixed[0]
+
+        #
+        # units = 'MB/s' if LooseVersion(cluster.version()) < LooseVersion('3.6') else '(K|M|G)iB/s'
+        # #throughput_pattern = "{stuff}={:f}{%s}{stuff}" % units
+        # throughput_pattern = '{stuff}={:f}{' + units + '}{stuff}'
+        #throughput_pattern = '={:f}{' + units + '}'
+        #throughput_pattern = '={:f}' + units
+        #
 
         self.assertEqual(chunk_length, value, "Expected chunk_length: {}.  We got: {}".format(value, chunk_length))
 
