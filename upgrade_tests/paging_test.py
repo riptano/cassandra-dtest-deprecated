@@ -313,6 +313,9 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
             # make sure expected and actual have same data elements (ignoring order)
             self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_undefined_page_size_default(self):
         """
         If the page size isn't sent then the default fetch size is used.
@@ -352,6 +355,9 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
     Tests concerned with paging when CQL modifiers (such as order, limit, allow filtering) are used.
     """
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_with_order_by(self):
         """"
         Paging over a single partition with ordering should work.
@@ -405,6 +411,9 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
                 stmt = SimpleStatement("select * from paging_test where id in (1,2) order by value asc", consistency_level=CL.ALL)
                 cursor.execute(stmt)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_with_order_by_reversed(self):
         """"
         Paging over a single partition with ordering and a reversed clustering order.
@@ -740,6 +749,9 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             self.maxDiff = None
             self.assertEqualIgnoreOrder(expected_data, all_results)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_paging_across_multi_wide_rows(self):
         cursor = self.prepare()
         cursor.execute("CREATE TABLE paging_test ( id int, value text, PRIMARY KEY (id, value) )")
@@ -770,6 +782,9 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_paging_using_secondary_indexes(self):
         cursor = self.prepare()
         cursor.execute("CREATE TABLE paging_test ( id int, mybool boolean, sometext text, PRIMARY KEY (id, sometext) )")
@@ -1133,6 +1148,9 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
             self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_data_change_impacting_later_page(self):
         cursor = self.prepare()
         cursor.execute("CREATE TABLE paging_test ( id int, mytext text, PRIMARY KEY (id, mytext) )")
@@ -1171,6 +1189,9 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
             expected_data.append({u'id': 2, u'mytext': u'foo'})
             self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_row_TTL_expiry_during_paging(self):
         cursor = self.prepare()
         cursor.execute("CREATE TABLE paging_test ( id int, mytext text, PRIMARY KEY (id, mytext) )")
@@ -1661,6 +1682,9 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
             self.check_all_paging_results(cursor, expected_data, 8,
                                           [25, 25, 25, 25, 25, 25, 25, 25])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_ttl_deletions(self):
         """Test ttl deletions. Paging over a query that has only tombstones """
         cursor = self.prepare()
@@ -1682,6 +1706,9 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
             time.sleep(5)
             self.check_all_paging_results(cursor, [], 0, [])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_failure_threshold_deletions(self):
         """Test that paging throws a failure in case of tombstone threshold """
         self.allow_log_errors = True

@@ -4,7 +4,7 @@ import time
 from assertions import assert_all, assert_none, assert_one
 from dtest import Tester, debug
 from sstable_generation_loading_test import BaseSStableLoaderTest
-from tools import new_node, since
+from tools import new_node, since, known_failure
 
 LEGACY_SSTABLES_JVM_ARGS = ["-Dcassandra.streamdes.initial_mem_buffer_size=1",
                             "-Dcassandra.streamdes.max_mem_buffer_size=5",
@@ -97,6 +97,9 @@ class TestStorageEngineUpgrade(Tester):
         """
         self.upgrade_with_clustered_table(compact_storage=True)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def upgrade_with_unclustered_CQL_table_test(self):
         """
         Validates we can do basic name queries on legacy sstables for a CQL table without clustering.
