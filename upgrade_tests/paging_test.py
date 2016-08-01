@@ -1641,6 +1641,9 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
             self.check_all_paging_results(cursor, expected_data, 8,
                                           [25, 25, 25, 25, 25, 25, 25, 25])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def test_multiple_cell_deletions(self):
         """Test multiple cell deletions """
         cursor = self.prepare()

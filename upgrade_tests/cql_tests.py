@@ -963,6 +963,9 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT COUNT(1) FROM events WHERE kind IN ('ev1', 'ev2') AND time=0", [[2]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def batch_test(self):
         cursor = self.prepare()
 
@@ -1265,6 +1268,9 @@ class TestCQL(UpgradeTester):
 
             assert_length_equal(res, 3)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def range_query_2ndary_test(self):
         """ Test range queries with 2ndary indexes (#4257) """
         cursor = self.prepare()
@@ -4782,6 +4788,9 @@ class TestCQL(UpgradeTester):
             # since we write at all, and LWT update (serial), we need to read back at serial (or higher)
             assert_one(cursor, "SELECT * FROM test", [0, ['foo', 'bar'], 'foobar'], cl=ConsistencyLevel.SERIAL)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since("2.0")
     def static_with_limit_test(self):
         """ Test LIMIT when static columns are present (#6956) """
@@ -4808,6 +4817,9 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT * FROM test WHERE k = 0 LIMIT 2", [[0, 0, 42], [0, 1, 42]])
             assert_all(cursor, "SELECT * FROM test WHERE k = 0 LIMIT 3", [[0, 0, 42], [0, 1, 42], [0, 2, 42]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since("2.0")
     def static_with_empty_clustering_test(self):
         """ Test for bug of #7455 """
@@ -5308,6 +5320,9 @@ class TestCQL(UpgradeTester):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             assert_all(cursor, "SELECT k FROM ks.test WHERE v = 0", [[0]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12356',
+                   flaky=True)
     def bug_10652_test(self):
         cursor = self.prepare()
 
