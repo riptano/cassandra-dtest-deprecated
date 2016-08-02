@@ -198,6 +198,9 @@ class TestCQL(UpgradeTester):
             # Check we don't allow empty values for url since this is the full underlying cell name (#6152)
             assert_invalid(cursor, "INSERT INTO clicks (userid, url, time) VALUES (810e8500-e29b-41d4-a716-446655440000, '', 42)")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def dense_cf_test(self):
         """ Test composite 'dense' CF syntax """
         cursor = self.prepare()
@@ -324,6 +327,9 @@ class TestCQL(UpgradeTester):
 
             assert_one(cursor, "SELECT * FROM clicks WHERE token(userid) > token(2) LIMIT 1", [3, 'http://foo.com', 42])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def limit_multiget_test(self):
         """ Validate LIMIT option for 'multiget' in SELECT statements """
         cursor = self.prepare()
@@ -377,6 +383,9 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT * FROM bard WHERE b=0 AND (c, d, e) > (1, 1, 1) ALLOW FILTERING;", [[0, 0, 2, 2, 2], [0, 0, 3, 3, 3]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def limit_sparse_test(self):
         """ Validate LIMIT option for sparse table in SELECT statements """
         cursor = self.prepare()
@@ -406,6 +415,9 @@ class TestCQL(UpgradeTester):
             res = list(cursor.execute("SELECT * FROM clicks LIMIT 4"))
             assert_length_equal(res, 4)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def counters_test(self):
         """ Validate counter support """
         cursor = self.prepare()
@@ -951,6 +963,9 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT COUNT(1) FROM events WHERE kind IN ('ev1', 'ev2') AND time=0", [[2]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def batch_test(self):
         cursor = self.prepare()
 
@@ -1065,6 +1080,9 @@ class TestCQL(UpgradeTester):
             res = cursor.execute("SELECT k, d, writetime(d) FROM test WHERE k = 1")
             assert_one(cursor, "SELECT k, d, writetime(d) FROM test WHERE k = 1", [1, None, None])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def no_range_ghost_test(self):
         cursor = self.prepare()
 
@@ -1185,6 +1203,9 @@ class TestCQL(UpgradeTester):
             for i in xrange(0, rows):
                 assert_all(cursor, "SELECT v1, v2 FROM test1 WHERE k = %d" % i, [[x, x] for x in xrange(i * cpr + col1, (i + 1) * cpr)])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def range_tombstones_compaction_test(self):
         """ Test deletion by 'composite prefix' (range tombstones) with compaction """
         cursor = self.prepare()
@@ -1247,6 +1268,9 @@ class TestCQL(UpgradeTester):
 
             assert_length_equal(res, 3)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def range_query_2ndary_test(self):
         """ Test range queries with 2ndary indexes (#4257) """
         cursor = self.prepare()
@@ -1724,6 +1748,9 @@ class TestCQL(UpgradeTester):
 
             assert_row_count(cursor, 'test', 2)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @freshCluster()
     def composite_index_with_pk_test(self):
 
@@ -1872,6 +1899,9 @@ class TestCQL(UpgradeTester):
             assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime>=12345679 AND key='key3' AND ctime<=12345680 LIMIT 3;")
             assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime=12345679  AND key='key3' AND ctime<=12345680 LIMIT 3")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @freshCluster()
     def order_by_multikey_test(self):
         """ Test for #4612 bug and more generaly order by when multiple C* rows are queried """
@@ -1926,6 +1956,9 @@ class TestCQL(UpgradeTester):
             cursor.execute("DELETE FROM test WHERE k = 1")
             assert_all(cursor, "SELECT * FROM test", [[0, 0], [2, 2]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def indexes_composite_test(self):
         cursor = self.prepare()
 
@@ -2413,6 +2446,9 @@ class TestCQL(UpgradeTester):
     def multi_in_test(self):
         self.__multi_in(False)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since('2.2')
     def multi_in_compact_test(self):
         self.__multi_in(True)
@@ -2772,6 +2808,9 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT value FROM indexed WHERE pk0 = 5 AND pk1 = 0 AND ck0 = 1 AND ck2 = 3 ALLOW FILTERING", [[4]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def bug_5240_test(self):
         cursor = self.prepare()
 
@@ -3055,6 +3094,9 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "UPDATE test SET v2 = 'bar' WHERE k = 0 IF v1 IN (142, 276)", [False, 2])
             assert_one(cursor, "UPDATE test SET v2 = 'bar' WHERE k = 0 IF v1 IN ()", [False, 2])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def conditional_delete_test(self):
         cursor = self.prepare()
 
@@ -3233,6 +3275,9 @@ class TestCQL(UpgradeTester):
             cursor.execute("UPDATE test_compact SET v = 3 WHERE k1 IN () AND k2 = 2")
             assert_nothing_changed("test_compact")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def collection_flush_test(self):
         """ Test for 5805 bug """
         cursor = self.prepare()
@@ -3250,6 +3295,9 @@ class TestCQL(UpgradeTester):
 
             assert_one(cursor, "SELECT * FROM test", [1, set([2])])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def select_distinct_test(self):
         cursor = self.prepare(ordered=True)
 
@@ -3392,6 +3440,9 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "INSERT INTO test(k, s) VALUES (0, {1, 2, 3}) IF NOT EXISTS", [True])
             assert_one(cursor, "SELECT * FROM test", [0, {1, 2, 3}], cl=ConsistencyLevel.SERIAL)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def bug_6115_test(self):
         cursor = self.prepare()
 
@@ -3489,6 +3540,9 @@ class TestCQL(UpgradeTester):
             """.format(id=userID_1)
             # TODO: deserialize the value here and check it's right.
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since('2.1')
     def more_user_types_test(self):
         """ user type test that does a little more nesting"""
@@ -3564,6 +3618,9 @@ class TestCQL(UpgradeTester):
             assert_none(cursor, "SELECT v FROM test2 WHERE k=0 AND v IN (1, 0)")
             assert_none(cursor, "SELECT v FROM test2 WHERE v IN (1, 0) ALLOW FILTERING")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def large_count_test(self):
         cursor = self.prepare()
 
@@ -3920,6 +3977,9 @@ class TestCQL(UpgradeTester):
                          APPLY BATCH
                        """, [False, 1, 'k2', 'newVal'])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def static_columns_with_2i_test(self):
         cursor = self.prepare()
 
@@ -4071,6 +4131,9 @@ class TestCQL(UpgradeTester):
                 # the coordinator is the not-upgraded 2.1 node
                 assert_one(cursor, "select count(*) from test where field3 = false limit 1;", [1])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def cas_and_ttl_test(self):
         cursor = self.prepare()
         cursor.execute("CREATE TABLE test (k int PRIMARY KEY, v int, lock boolean)")
@@ -4313,6 +4376,9 @@ class TestCQL(UpgradeTester):
                 # not supported yet
                 check_invalid("m CONTAINS 'bar'", expected=SyntaxException)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since('2.1')
     def list_item_conditional_test(self):
         # Lists
@@ -4350,6 +4416,9 @@ class TestCQL(UpgradeTester):
                 assert_one(cursor, "DELETE FROM %s WHERE k=0 IF l[1] = 'bar'" % (table,), [True])
                 assert_none(cursor, "SELECT * FROM %s" % (table,), cl=ConsistencyLevel.SERIAL)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since('2.1.1')
     def expanded_list_item_conditional_test(self):
         # expanded functionality from CASSANDRA-6839
@@ -4719,6 +4788,9 @@ class TestCQL(UpgradeTester):
             # since we write at all, and LWT update (serial), we need to read back at serial (or higher)
             assert_one(cursor, "SELECT * FROM test", [0, ['foo', 'bar'], 'foobar'], cl=ConsistencyLevel.SERIAL)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since("2.0")
     def static_with_limit_test(self):
         """ Test LIMIT when static columns are present (#6956) """
@@ -4745,6 +4817,9 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT * FROM test WHERE k = 0 LIMIT 2", [[0, 0, 42], [0, 1, 42]])
             assert_all(cursor, "SELECT * FROM test WHERE k = 0 LIMIT 3", [[0, 0, 42], [0, 1, 42], [0, 2, 42]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since("2.0")
     def static_with_empty_clustering_test(self):
         """ Test for bug of #7455 """
@@ -4769,6 +4844,9 @@ class TestCQL(UpgradeTester):
 
             assert_one(cursor, "SELECT * FROM test", ['partition1', '', 'static value', 'value'])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     @since("1.2")
     def limit_compact_table_test(self):
         """ Check for #7052 bug """
@@ -4800,6 +4878,9 @@ class TestCQL(UpgradeTester):
             # This doesn't work -- see #7059
             # assert_all(cursor, "SELECT * FROM test WHERE v > 1 AND v <= 3 LIMIT 6 ALLOW FILTERING", [[1, 2], [1, 3], [0, 2], [0, 3], [2, 2], [2, 3]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def key_index_with_reverse_clustering_test(self):
         """ Test for #6950 bug """
         cursor = self.prepare()
@@ -4885,6 +4966,9 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT * FROM test WHERE a=1 AND b=2 AND c IN (3)", [1, 2, 3])
             assert_one(cursor, "SELECT * FROM test WHERE a=1 AND b=2 AND c IN (3, 4)", [1, 2, 3])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def bug7105_test(self):
         """Test for #7105 bug"""
         cursor = self.prepare()
@@ -4908,6 +4992,9 @@ class TestCQL(UpgradeTester):
 
             assert_one(cursor, "SELECT * FROM test WHERE a=1 AND b=2 ORDER BY b DESC", [1, 2, 3, 3])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def bug_6612_test(self):
         cursor = self.prepare()
 
@@ -5175,6 +5262,12 @@ class TestCQL(UpgradeTester):
 
             assert_none(cursor, "select * from space1.table1 where a=1 and b=1")
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12354',
+                   flaky=True)
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12352',
+                   flaky=True)
     def bug_5732_test(self):
         cursor = self.prepare(use_cache=True)
 
@@ -5227,6 +5320,9 @@ class TestCQL(UpgradeTester):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             assert_all(cursor, "SELECT k FROM ks.test WHERE v = 0", [[0]])
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12356',
+                   flaky=True)
     def bug_10652_test(self):
         cursor = self.prepare()
 
