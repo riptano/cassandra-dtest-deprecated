@@ -346,11 +346,11 @@ class StorageProxyCQLTester(CQLTester):
              [0, 1, 3, 0]])
 
         self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 1 ALLOW FILTERING"))),
-            [[1, 0, 0, 0],
-             [1, 0, 1, 0],
-             [1, 0, 2, 0],
-             [1, 0, 3, 0],
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 <= 1 AND k2 >= 1 ALLOW FILTERING"))),
+            [[0, 1, 0, 0],
+             [0, 1, 1, 0],
+             [0, 1, 2, 0],
+             [0, 1, 3, 0],
              [1, 1, 0, 0],
              [1, 1, 1, 0],
              [1, 1, 2, 0],
@@ -358,8 +358,10 @@ class StorageProxyCQLTester(CQLTester):
 
         self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 2 ALLOW FILTERING")), [])
 
+        self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 <=0 AND k2 > 1 ALLOW FILTERING")), [])
+
         self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 0 ALLOW FILTERING"))),
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 <= 0 ALLOW FILTERING"))),
             [[0, 0, 0, 0],
              [0, 0, 1, 0],
              [0, 0, 2, 0],
@@ -368,6 +370,13 @@ class StorageProxyCQLTester(CQLTester):
              [1, 0, 1, 0],
              [1, 0, 2, 0],
              [1, 0, 3, 0]])
+
+        self.assertEqual(
+            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 <= 0 AND k2 = 0 ALLOW FILTERING"))),
+            [[0, 0, 0, 0],
+             [0, 0, 1, 0],
+             [0, 0, 2, 0],
+             [0, 0, 3, 0]])
 
         self.assertEqual(
             sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 1 ALLOW FILTERING"))),
@@ -412,7 +421,13 @@ class StorageProxyCQLTester(CQLTester):
             session.execute("SELECT * FROM test_filter WHERE k1 = 0")
 
         with self.assertRaises(InvalidRequest):
-            session.execute("SELECT * FROM test_filter WHERE k2 = 0")
+            session.execute("SELECT * FROM test_filter WHERE k1 = 0 AND k2 > 0")
+
+        with self.assertRaises(InvalidRequest):
+            session.execute("SELECT * FROM test_filter WHERE k1 >= 0 AND k2 in (0,1,2)")
+
+        with self.assertRaises(InvalidRequest):
+            session.execute("SELECT * FROM test_filter WHERE k2 > 0")
 
     def batch_test(self):
         """
