@@ -1377,7 +1377,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [3, 6, 4, 7],
                                    [3, 5, 4, 6]])
 
-
     @since('3.8')
     def test_paging_with_filtering_on_partition_key(self):
         """
@@ -1479,7 +1478,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             # Single partition query with ORDER BY and LIMIT
             assert_invalid(session, "SELECT * FROM test WHERE a <= 0 AND c >= 1 ORDER BY b DESC LIMIT 2 ALLOW FILTERING", expected=InvalidRequest)
 
-
     def _test_paging_with_filtering_on_partition_key_on_counter_columns(self, session, with_compact_storage):
         if with_compact_storage:
             self.create_ks(session, 'test_flt_counter_columns_compact_storage', 2)
@@ -1520,7 +1518,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             self.assertEqualIgnoreOrder(res, [[2, 3, 4, 5],
                                               [3, 3, 4, 5],
                                               [4, 3, 4, 5]])
-
 
     @since('3.8')
     def test_paging_with_filtering_on_partition_key_on_counter_columns(self):
@@ -1713,7 +1710,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [3, 0, {1: 2}, 3],
                                               [4, 0, {1: 2}, 3]])
 
-
     @since('3.8')
     def test_paging_with_filtering_on_partition_key_on_static_columns(self):
         """
@@ -1738,7 +1734,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [2, 9, 3, 10]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a > 3 AND s > 1 AND b > 5 AND b < 7 ALLOW FILTERING"))
-            self.assertEqualIgnoreOrder(res, [[4, 6, 5, 7] ])
+            self.assertEqualIgnoreOrder(res, [[4, 6, 5, 7]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE s > 1 AND a > 3 AND b > 4 ALLOW FILTERING"))
             self.assertEqual(res, [[4, 5, 5, 6],
