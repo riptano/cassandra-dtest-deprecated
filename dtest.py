@@ -104,6 +104,11 @@ LOG = logging.getLogger('dtest')
 logging.getLogger('cassandra').setLevel(logging.INFO)
 
 
+def block_index(index_name):
+    #takes index_name and checks if index is built
+    #returns boolean
+    #
+
 def get_sha(repo_dir):
     try:
         output = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir).strip()
