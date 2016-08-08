@@ -136,7 +136,8 @@ class TestConfiguration(Tester):
         chunk_string = "chunk_length_kb" if self.cluster.version() < '3.0' else "chunk_length_in_kb"
         # chunk_length = parse.search("'%s': '{:d}'" % (chunk_string), result).fixed[0]
         # chunk_length = parse.search((chunk_string + ':''{:d}'), result).fixed[0]
-        chunk_length = parse.search("'" + chunk_string + "': '{:d}'", result).fixed[0]
+        #chunk_length = parse.search("'" + chunk_string + "': '{:d}'", result).fixed[0]
+        chunk_length = parse.search("'" + chunk_string + "': '{chunk_length:d}'", result).named['chunk_length']
         # chunk_length = parse.search(" + chunk_string + : '{:d}'", result).fixed[1]
         # chunk_length = parse.search("' + chunk_string +' : '{:d}'", result).fixed[1]
         # print chunk_string
