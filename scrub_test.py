@@ -5,8 +5,8 @@ import subprocess
 import time
 import uuid
 
-from ccmlib import common
 import parse
+from ccmlib import common
 
 from assertions import assert_length_equal
 from dtest import Tester, debug
@@ -170,23 +170,9 @@ class TestHelper(Tester):
         generations by that amount.
         """
         for table_or_index, table_sstables in sstables.items():
-            # print "table or index"
-            # print table_or_index
-            # print "table_sstables"
-            # print table_sstables
-            # ['gender_idx/mb-1-big-CRC.db', 'gender_idx/mb-1-big-Data.db', 'gender_idx/mb-1-big-Filter.db',
-            # 'gender_idx/mb-1-big-Index.db', 'gender_idx/mb-1-big-Statistics.db', 'gender_idx/mb-1-big-Summary.db', 'gender_idx/mb-1-big-TOC.txt']
-            # print "sstables.items()"
-            # print sstables.items()
-            # increment_by = len(set(parse.search('{}-{:d}-{suffix}.{file_extention}', s).fixed[0] for s in table_sstables))
             increment_by = len(set(parse.search('{}-{increment_by}-{suffix}.{file_extention}', s).named['increment_by'] for s in table_sstables))
-            # increment_by = (re.match('.*(\d)[^0-9].*', s).group(1) for s in table_sstables)
-            # more stuff
-            # increment_by = len(set(re.match('.*(\d)[^0-9].*', s).group(1) for s in table_sstables))
-            #
-            print "increment_by"
-            print increment_by
             sstables[table_or_index] = [self.increment_generation_by(s, increment_by) for s in table_sstables]
+
         debug('sstables after increment {}'.format(str(sstables)))
 
 

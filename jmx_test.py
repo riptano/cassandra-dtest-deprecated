@@ -132,7 +132,7 @@ class TestJMX(Tester):
             updated_progress_string = jmx.read_attribute(compaction_manager, 'CompactionSummary')[0]
             var = 'Compaction@{uuid}(keyspace1, standard1, {progress}/{total})bytes'
             progress = int(parse.search(var, progress_string).named['progress'])
-            updated_progress = int(parse.search(var, updated_progress_string).named['progress'])
+            updated_progress = int(parse.search(var, updated_progress_string).named['updated_progress'])
 
             debug(progress_string)
             debug(updated_progress_string)

@@ -43,19 +43,19 @@ class TestTokenGenerator(Tester):
         for line in lines:
             if line.startswith("DC #"):
                 if dc_tokens is not None:
-                    self.assertGreater(dc_tokens.__len__(), 0, "dc_tokens is empty from token-generator %r" % args)
+                    self.assertGreater(dc_tokens.__len__(), 0, "dc_tokens is empty from token-generator {}".format(args))
                     generated_tokens.append(dc_tokens)
                 dc_tokens = []
             else:
                 if line:
-                    m = parse.search('Node #{:d}:{:s}{:d}', line)
-                    self.assertIsNotNone(m, "Line \"%r\" does not match pattern from token-generator %r" % (line, args))
-                    node_num = int(m.fixed[0])
-                    node_token = int(m.fixed[2])
+                    m = parse.search('Node #{node_num:d}:{:s}{node_token:d}', line)
+                    self.assertIsNotNone(m, "Line \"{}\" does not match pattern from token-generator {}".format(line, args))
+                    node_num = int(m.named['node_num'])
+                    node_token = int(m.named['node_token'])
                     dc_tokens.append(node_token)
-                    self.assertEqual(node_num, dc_tokens.__len__(), "invalid token count from token-generator %r" % args)
-        self.assertIsNotNone(dc_tokens, "No tokens from token-generator %r" % args)
-        self.assertGreater(dc_tokens.__len__(), 0, "No tokens from token-generator %r" % args)
+                    self.assertEqual(node_num, dc_tokens.__len__(), "invalid token count from token-generator {}".format(args))
+        self.assertIsNotNone(dc_tokens, "No tokens from token-generator {}".format(args))
+        self.assertGreater(dc_tokens.__len__(), 0, "No tokens from token-generator {}".format(args))
         generated_tokens.append(dc_tokens)
 
         return generated_tokens
