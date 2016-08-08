@@ -136,7 +136,7 @@ class TestConfiguration(Tester):
         chunk_string = "chunk_length_kb" if self.cluster.version() < '3.0' else "chunk_length_in_kb"
         # chunk_length = parse.search("'%s': '{:d}'" % (chunk_string), result).fixed[0]
         # chunk_length = parse.search((chunk_string + ':''{:d}'), result).fixed[0]
-        #chunk_length = parse.search("'" + chunk_string + "': '{:d}'", result).fixed[0]
+        # chunk_length = parse.search("'" + chunk_string + "': '{:d}'", result).fixed[0]
         chunk_length = parse.search("'" + chunk_string + "': '{chunk_length:d}'", result).named['chunk_length']
         # chunk_length = parse.search(" + chunk_string + : '{:d}'", result).fixed[1]
         # chunk_length = parse.search("' + chunk_string +' : '{:d}'", result).fixed[1]
@@ -146,10 +146,10 @@ class TestConfiguration(Tester):
 
         #
         # units = 'MB/s' if LooseVersion(cluster.version()) < LooseVersion('3.6') else '(K|M|G)iB/s'
-        # #throughput_pattern = "{stuff}={:f}{%s}{stuff}" % units
+        # throughput_pattern = "{stuff}={:f}{%s}{stuff}" % units
         # throughput_pattern = '{stuff}={:f}{' + units + '}{stuff}'
-        #throughput_pattern = '={:f}{' + units + '}'
-        #throughput_pattern = '={:f}' + units
+        # throughput_pattern = '={:f}{' + units + '}'
+        # throughput_pattern = '={:f}' + units
         #
 
         self.assertEqual(chunk_length, value, "Expected chunk_length: {}.  We got: {}".format(value, chunk_length))
