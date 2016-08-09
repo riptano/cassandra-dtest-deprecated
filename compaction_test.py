@@ -250,9 +250,13 @@ class TestCompaction(Tester):
         matches = block_on_compaction_log(node1)
         stringline = matches[0]
 
-        units = 'MB/s' if LooseVersion(cluster.version()) < LooseVersion('3.6') else '(K|M|G)iB/s'
-        throughput_pattern = '{}={avgthroughput:f}{' + units + '}{}'
-        avgthroughput = parse.search(throughput_pattern, stringline).named['avgthroughput']
+        throughput_pattern = '{}={avgthroughput:f}{units}/s'
+        m = parse.search(throughput_pattern, stringline)
+        avgthroughput = m.named['avgthroughput']
+        found_units = m.named['units']
+
+        units = ['MB'] if LooseVersion(cluster.version()) < LooseVersion('3.6') else ['KiB', 'MiB', 'GiB']
+        self.assertIn(found_units, units)
 
         debug(avgthroughput)
 
