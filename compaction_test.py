@@ -7,11 +7,11 @@ import tempfile
 import time
 
 from ccmlib import common
-from assertions import assert_none, assert_one, assert_length_equal
+from assertions import assert_none, assert_one, assert_length_equal, assert_row_count
 from dtest import Tester, debug
 from distutils.version import LooseVersion
 from nose.tools import assert_equal
-from tools import known_failure, since
+from tools import known_failure, since, rows_to_list
 
 
 class TestCompaction(Tester):
@@ -483,6 +483,58 @@ class TestCompaction(Tester):
         self.assertEquals(len(node1.data_directories()), len(sstable_files),
                           'Expected one sstable data file per node directory but got {}'.format(sstable_files))
 
+    @since('3.9')
+    def nodetool_garbagecollect_test(self):
+        """
+        Test that nodetool garbagecollect decreases size and has no effect on the contents of the table.
+        """
+        cluster = self.cluster
+        cluster.populate(1).start(wait_for_binary_proto=True)
+        [node1] = cluster.nodelist()
+        session = self.patient_cql_connection(node1)
+        self.create_ks(session, 'ks', 1)
+
+        session.execute("create table ks.cf (key int, subkey int, column int, val int, primary key (key, subkey, column));")
+
+        for x in range(0, 21):
+            for y in range(0, 6):
+                session.execute('insert into cf (key, subkey, column, val) values (' + str(x) + ', ' + str(y) + ', ' + str(y) + ', ' + str(x + y) + ')')
+        node1.flush()
+
+        # partition delete
+        for x in range(0, 5):
+            session.execute('delete from cf where key = ' + str(x))
+        # row range delete
+        for x in range(5, 10):
+            for y in range(0, 5):
+                session.execute('delete from cf where key = ' + str(x) + ' and subkey = ' + str(y))
+        # row delete
+        for x in range(10, 15):
+            for y in range(0, 5):
+                session.execute('delete from cf where key = ' + str(x) + ' and subkey = ' + str(y) + ' and column = ' + str(y))
+        # cell delete
+        for x in range(15, 20):
+            for y in range(0, 5):
+                session.execute('delete val from cf where key = ' + str(x) + ' and subkey = ' + str(y) + ' and column = ' + str(y))
+        rowcount = 21 * 6 - 5 * 6 - 5 * 5 - 5 * 5
+        node1.flush()
+
+        assert_row_count(session, "cf", rowcount)
+        table = rows_to_list(session.execute("select * from cf"))
+        size = data_size(node1, "cf")
+
+        node1.nodetool("garbagecollect")
+        assert_row_count(session, "cf", rowcount)
+        self.assertEqual(table, rows_to_list(session.execute("select * from cf")))
+        row_gc_size = data_size(node1, "cf")
+        self.assertLess(row_gc_size, size)
+
+        node1.nodetool("garbagecollect -g CELL")
+        assert_row_count(session, "cf", rowcount)
+        self.assertEqual(table, rows_to_list(session.execute("select * from cf")))
+        cell_gc_size = data_size(node1, "cf")
+        self.assertLess(cell_gc_size, row_gc_size)
+
     def skip_if_no_major_compaction(self):
         if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':
             self.skipTest('major compaction not implemented for LCS in this version of Cassandra')
@@ -550,6 +602,18 @@ def block_on_compaction_log(node, ks=None, table=None):
 
 def stress_write(node, keycount=100000):
     node.stress(['write', 'n={keycount}'.format(keycount=keycount)])
+
+
+def data_size(node, table_name):
+    output = node.nodetool('cfstats', True)[0]
+    if output.find(table_name) != -1:
+        output = output[output.find(table_name):]
+        output = output[output.find("Space used (live)"):]
+        return int(output[output.find(":") + 1:output.find("\n")].strip())
+    else:
+        debug("datasize not found")
+        debug(output)
+        assert false
 
 
 strategies = ['LeveledCompactionStrategy', 'SizeTieredCompactionStrategy', 'DateTieredCompactionStrategy']
