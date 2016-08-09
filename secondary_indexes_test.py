@@ -1028,7 +1028,7 @@ class TestPreJoinCallback(Tester):
         ]
         Tester.__init__(self, *args, **kwargs)
 
-    def _base_test(self, joinFn):
+    def _base_test(self, timeout, joinFn):
         cluster = self.cluster
         tokens = cluster.balanced_tokens(2)
         cluster.set_configuration_options(values={'num_tokens': 1})
@@ -1036,7 +1036,7 @@ class TestPreJoinCallback(Tester):
         # Create a single node cluster
         cluster.populate(1)
         node1 = cluster.nodelist()[0]
-        node1.set_configuration_options(values={'initial_token': tokens[0], 'streaming_socket_timeout_in_ms': 1000})
+        node1.set_configuration_options(values={'initial_token': tokens[0], 'streaming_socket_timeout_in_ms': timeout})
         cluster.start(wait_other_notice=True)
 
         # Create a table with 2i
@@ -1061,7 +1061,7 @@ class TestPreJoinCallback(Tester):
             node2.start(wait_for_binary_proto=True)
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(bootstrap)
+        self._base_test(600000, bootstrap)
 
     @since('3.0')
     def resume_test(self):
@@ -1081,7 +1081,7 @@ class TestPreJoinCallback(Tester):
             assert_bootstrap_state(self, node2, 'COMPLETED')
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(resume)
+        self._base_test(1000, resume)
 
     @since('3.0')
     def manual_join_test(self):
@@ -1095,7 +1095,7 @@ class TestPreJoinCallback(Tester):
             node2.nodetool("join")
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(manual_join)
+        self._base_test(600000, manual_join)
 
     @since('3.0')
     def write_survey_test(self):
@@ -1110,4 +1110,4 @@ class TestPreJoinCallback(Tester):
             self.assertTrue(node2.grep_log('Leaving write survey mode and joining ring at operator request'))
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(write_survey_and_join)
+        self._base_test(600000, write_survey_and_join)
