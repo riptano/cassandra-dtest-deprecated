@@ -16,7 +16,7 @@ from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node
 from nose.plugins.attrib import attr
-from nose.tools import assert_equal, assert_in, assert_is_instance, assert_true
+from nose.tools import assert_equal, assert_in, assert_true, assert_is_instance
 
 import assertions
 from dtest import CASSANDRA_DIR, DISABLE_VNODES, IGNORE_REQUIRE, debug

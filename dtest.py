@@ -104,7 +104,7 @@ LOG = logging.getLogger('dtest')
 logging.getLogger('cassandra').setLevel(logging.INFO)
 
 
-def index_is_built(keyspace, table_name, idx_name, session):
+def index_is_built(session, keyspace, table_name, idx_name):
     # checks if an index has been built
     index_query = (
         """SELECT * FROM system_schema.indexes WHERE keyspace_name = '{}' AND table_name = '{}' AND index_name = '{}'""".format(keyspace, table_name, idx_name)
