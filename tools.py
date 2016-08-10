@@ -11,14 +11,14 @@ import unittest
 from distutils.version import LooseVersion
 from threading import Thread
 
-import assertions
 from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node
 from nose.plugins.attrib import attr
-from nose.tools import assert_equal, assert_in, assert_true, assert_is_instance
+from nose.tools import assert_equal, assert_in, assert_is_instance, assert_true
 
+import assertions
 from dtest import CASSANDRA_DIR, DISABLE_VNODES, IGNORE_REQUIRE, debug
 
 
@@ -45,19 +45,6 @@ class RerunTestException(Exception):
     When the test raises RerunTestException, the flaky plugin will re-run the test and it will pass if the next attempt(s) succeed.
     """
 
-
-def index_is_built(table_name, idx_name):
-            index_query = (
-                """SELECT * FROM system_schema.indexes WHERE keyspace_name = 'ks' AND table_name = '{}' AND index_name = '{}'""".format(table_name, idx_name)
-                if self.cluster.version() > '3.0' else
-                """SELECT * FROM system."IndexInfo" WHERE table_name = 'ks' AND index_name = '{}.{}'""".format(table_name, idx_name)
-            )
-            return len(list(session.execute(index_query))) == 1
-
-        start = time.time()
-        while not index_is_built('regular_table', 'composites_index') and time.time() + 10 < start:
-            debug("waiting for index to build")
-            time.sleep(1)
 
 def requires_rerun(err, *args):
     """
