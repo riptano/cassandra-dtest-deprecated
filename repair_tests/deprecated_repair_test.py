@@ -30,6 +30,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["data_centers"], "[]", opt)
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
+        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_async_2_test(self):
         """
@@ -47,6 +48,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["data_centers"], "[]", opt)
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[]", opt)
+        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_async_3_test(self):
         """
@@ -63,6 +65,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["data_centers"], "[]", opt)
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
+        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_range_async_1_test(self):
         """
@@ -82,6 +85,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
+        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_range_async_2_test(self):
         """
@@ -101,6 +105,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
+        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_range_async_3_test(self):
         """
@@ -119,6 +124,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
+        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def _deprecated_repair_jmx(self, method, arguments):
         """
@@ -152,7 +158,7 @@ class TestDeprecatedRepairAPI(Tester):
         # get repair parameters from the log
         l = node1.grep_log(("Starting repair command #1, repairing keyspace ks with repair options \(parallelism: (?P<parallelism>\w+), primary range: (?P<pr>\w+), "
                             "incremental: (?P<incremental>\w+), job threads: (?P<jobs>\d+), ColumnFamilies: (?P<cfs>.+), dataCenters: (?P<dc>.+), "
-                            "hosts: (?P<hosts>.+), # of ranges: (?P<ranges>\d+)\)"))
+                            "hosts: (?P<hosts>.+), # of ranges: (?P<ranges>\d+), pull repair: (?P<pullrepair>true|false)\)"))
         self.assertEqual(len(l), 1)
         line, m = l[0]
         return {"parallelism": m.group("parallelism"),
@@ -162,4 +168,5 @@ class TestDeprecatedRepairAPI(Tester):
                 "column_families": m.group("cfs"),
                 "data_centers": m.group("dc"),
                 "hosts": m.group("hosts"),
-                "ranges": m.group("ranges")}
+                "ranges": m.group("ranges"),
+                "pull_repair": m.group("pullrepair")}
