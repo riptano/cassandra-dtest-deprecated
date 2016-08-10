@@ -6,6 +6,7 @@ import tempfile
 from cassandra import ConsistencyLevel, ReadTimeout, Unavailable
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node, NodeError
+from nose.plugins.attrib import attr
 
 from dtest import DISABLE_VNODES, Tester, debug
 from tools import InterruptBootstrap, known_failure, since, new_node, rows_to_list
@@ -45,6 +46,7 @@ class TestReplaceAddress(Tester):
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-11652',
                    flaky=True,
                    notes='windows')
+    @attr('resource-intensive')
     def replace_stopped_node_test(self):
         """
         Test that we can replace a node that is not shutdown gracefully.
