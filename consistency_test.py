@@ -211,9 +211,6 @@ class TestAvailability(TestHelper):
             self.cluster.nodelist()[node].stop()
             num_alive -= 1
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12427',
-                   flaky=True)
     def _test_network_topology_strategy(self, combinations):
         """
         Helper test function for multiple data centers, invoke _test_insert_query_from_node() for each node
@@ -311,6 +308,9 @@ class TestAvailability(TestHelper):
 
         self._test_simple_strategy(combinations)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12427',
+                   flaky=True)
     @attr("resource-intensive")
     def test_network_topology_strategy(self):
         """
