@@ -293,7 +293,8 @@ class TestSecondaryIndexes(Tester):
         session.execute("use keyspace1;")
         lookup_value = session.execute('select "C0" from standard1 limit 1')[0].C0
         session.execute('CREATE INDEX ix_c0 ON standard1("C0");')
-
+        import ipdb
+        ipdb.set_trace()
         while not index_is_built(cluster, session, 'keyspace1', 'standard1', 'ix_c0'):
             debug("waiting for index to build")
             time.sleep(1)
