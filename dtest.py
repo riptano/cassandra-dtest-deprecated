@@ -106,11 +106,8 @@ logging.getLogger('cassandra').setLevel(logging.INFO)
 
 def index_is_built(cluster, session, keyspace, table_name, idx_name):
     # checks if an index has been built
-    index_query = (
-        """SELECT * FROM system_schema.indexes WHERE keyspace_name = '{}' AND table_name = '{}' AND index_name = '{}'""".format(keyspace, table_name, idx_name)
-        if cluster.version() > '3.0' else
-        """SELECT * FROM system."IndexInfo" WHERE table_name = '{}' AND index_name = '{}.{}'""".format(keyspace, table_name, idx_name)
-    )
+    full_idx_name = idx_name if cluster.version() > '3.0' else '{}.{}'.format(table_name, idx_name)
+    index_query = """SELECT * FROM system."IndexInfo" WHERE table_name = '{}' AND index_name = '{}'""".format(keyspace, full_idx_name)
     return len(list(session.execute(index_query))) == 1
 
 
