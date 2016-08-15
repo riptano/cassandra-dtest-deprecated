@@ -11,8 +11,7 @@ from nose.plugins.attrib import attr
 from dtest import DISABLE_VNODES, Tester, debug
 from tools import InterruptBootstrap, known_failure, since, new_node, rows_to_list
 
-from bootstrap_test import assert_bootstrap_state
-from assertions import assert_not_running, assert_all
+from assertions import assert_not_running, assert_all, assert_bootstrap_state
 
 
 class NodeUnavailable(Exception):

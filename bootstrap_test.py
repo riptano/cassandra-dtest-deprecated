@@ -10,24 +10,10 @@ from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
 from ccmlib.node import NodeError
 
-from assertions import assert_almost_equal, assert_one, assert_not_running
+from assertions import assert_almost_equal, assert_one, assert_not_running, assert_bootstrap_state
 from dtest import Tester, debug, DISABLE_VNODES
 from tools import (KillOnBootstrap, known_failure,
                    new_node, no_vnodes, query_c1c2, since)
-
-
-def assert_bootstrap_state(tester, node, expected_bootstrap_state):
-    """
-    Assert that a node is on a given bootstrap state
-    @param tester The dtest.Tester object to fetch the exclusive connection to the node
-    @param node The node to check bootstrap state
-    @param expected_bootstrap_state Bootstrap state to expect
-
-    Examples:
-    assert_bootstrap_state(self, node3, 'COMPLETED')
-    """
-    session = tester.patient_exclusive_cql_connection(node)
-    assert_one(session, "SELECT bootstrapped FROM system.local WHERE key='local'", [expected_bootstrap_state])
 
 
 class TestBootstrap(Tester):

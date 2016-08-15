@@ -11,9 +11,9 @@ from cassandra.concurrent import (execute_concurrent,
 from cassandra.protocol import ConfigurationException
 from cassandra.query import BatchStatement, SimpleStatement
 
-from assertions import assert_invalid, assert_one, assert_row_count
+from assertions import assert_invalid, assert_one, assert_row_count, assert_bootstrap_state
 from dtest import DISABLE_VNODES, OFFHEAP_MEMTABLES, Tester, debug
-from tools import known_failure, rows_to_list, since
+from tools import known_failure, rows_to_list, since, new_node, InterruptBootstrap
 
 
 class TestSecondaryIndexes(Tester):
@@ -1019,3 +1019,98 @@ class TestUpgradeSecondaryIndexes(Tester):
             node.set_log_level("INFO")
             node.start(wait_other_notice=True)
             # node.nodetool('upgradesstables -a')
+
+class TestPreJoinCallback(Tester):
+
+    def __init__(self, *args, **kwargs):
+        # Ignore these log patterns:
+        self.ignore_log_patterns = [
+            # Ignore streaming error during bootstrap
+            r'Exception encountered during startup',
+            r'Streaming error occurred'
+        ]
+        Tester.__init__(self, *args, **kwargs)
+
+    def _base_test(self, timeout, joinFn):
+        cluster = self.cluster
+        tokens = cluster.balanced_tokens(2)
+        cluster.set_configuration_options(values={'num_tokens': 1})
+
+        # Create a single node cluster
+        cluster.populate(1)
+        node1 = cluster.nodelist()[0]
+        node1.set_configuration_options(values={'initial_token': tokens[0], 'streaming_socket_timeout_in_ms': timeout})
+        cluster.start(wait_other_notice=True)
+
+        # Create a table with 2i
+        session = self.patient_cql_connection(node1)
+        self.create_ks(session, 'ks', 1)
+        self.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
+        session.execute("CREATE INDEX c2_idx ON cf (c2);")
+
+        # Insert enough data to later allow to interrupt bootstrapping
+        keys = 1000000
+        insert_statement = session.prepare("INSERT INTO ks.cf (key, c1, c2) VALUES (?, 'value1', 'value2')")
+        execute_concurrent_with_args(session, insert_statement, [['k%d' % k] for k in range(keys)])
+
+        # Run the join function to test
+        joinFn(cluster, tokens[1])
+
+    @since('3.0')
+    def bootstrap_test(self):
+        def bootstrap(cluster, token):
+            node2 = new_node(cluster)
+            node2.set_configuration_options(values={'initial_token': token})
+            node2.start(wait_for_binary_proto=True)
+            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+
+        self._base_test(600000, bootstrap)
+
+    @since('3.0')
+    def resume_test(self):
+        def resume(cluster, token):
+            node1 = cluster.nodes['node1']
+            node2 = new_node(cluster)
+            node2.set_configuration_options(values={'initial_token': token, 'streaming_socket_timeout_in_ms': 1000})
+            t = InterruptBootstrap(node1)
+            t.start()
+            node2.start(wait_other_notice=False, wait_for_binary_proto=True)
+            t.join()
+            assert_bootstrap_state(self, node2, 'IN_PROGRESS')
+
+            node1.start(wait_for_binary_proto=True)
+
+            node2.nodetool("bootstrap resume")
+            assert_bootstrap_state(self, node2, 'COMPLETED')
+            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+
+        self._base_test(1000, resume)
+
+    @since('3.0')
+    def manual_join_test(self):
+        def manual_join(cluster, token):
+            node2 = new_node(cluster)
+            node2.set_configuration_options(values={'initial_token': token})
+            node2.start(join_ring=False, wait_for_binary_proto=True, wait_other_notice=240)
+            self.assertTrue(node2.grep_log('Not joining ring as requested'))
+            self.assertFalse(node2.grep_log('Executing pre-join'))
+
+            node2.nodetool("join")
+            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+
+        self._base_test(600000, manual_join)
+
+    @since('3.0')
+    def write_survey_test(self):
+        def write_survey_and_join(cluster, token):
+            node2 = new_node(cluster)
+            node2.set_configuration_options(values={'initial_token': token})
+            node2.start(jvm_args=["-Dcassandra.write_survey=true"], wait_for_binary_proto=True)
+            self.assertTrue(node2.grep_log('Startup complete, but write survey mode is active, not becoming an active ring member.'))
+            self.assertFalse(node2.grep_log('Executing pre-join'))
+
+            node2.nodetool("join")
+            self.assertTrue(node2.grep_log('Leaving write survey mode and joining ring at operator request'))
+            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+
+        self._base_test(600000, write_survey_and_join)
