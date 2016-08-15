@@ -1088,7 +1088,7 @@ class TestPreJoinCallback(Tester):
         def manual_join(cluster, token):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
-            node2.start(join_ring=False, wait_for_binary_proto=True)
+            node2.start(join_ring=False, wait_for_binary_proto=True, wait_other_notice=240)
             self.assertTrue(node2.grep_log('Not joining ring as requested'))
             self.assertFalse(node2.grep_log('Executing pre-join'))
 
