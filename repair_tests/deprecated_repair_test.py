@@ -1,5 +1,6 @@
 from cassandra import ConsistencyLevel
 from ccmlib.common import is_win
+from distutils.version import LooseVersion
 
 from dtest import Tester, debug
 from jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
@@ -30,7 +31,6 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["data_centers"], "[]", opt)
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
-        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_async_2_test(self):
         """
@@ -48,7 +48,6 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["data_centers"], "[]", opt)
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[]", opt)
-        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_async_3_test(self):
         """
@@ -65,7 +64,6 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["data_centers"], "[]", opt)
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
-        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_range_async_1_test(self):
         """
@@ -85,7 +83,6 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
-        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_range_async_2_test(self):
         """
@@ -105,7 +102,6 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
-        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def force_repair_range_async_3_test(self):
         """
@@ -124,7 +120,6 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
-        self.assertEqual(opt["pull_repair"], "false", opt)
 
     def _deprecated_repair_jmx(self, method, arguments):
         """
@@ -141,6 +136,7 @@ class TestDeprecatedRepairAPI(Tester):
         node1, node2 = cluster.nodelist()
         remove_perf_disable_shared_mem(node1)
         cluster.start()
+        supports_pull_repair = LooseVersion(cluster.version()) >= LooseVersion('3.10')
 
         session = self.patient_cql_connection(node1)
         self.create_ks(session, 'ks', 2)
@@ -158,9 +154,14 @@ class TestDeprecatedRepairAPI(Tester):
         # get repair parameters from the log
         l = node1.grep_log(("Starting repair command #1, repairing keyspace ks with repair options \(parallelism: (?P<parallelism>\w+), primary range: (?P<pr>\w+), "
                             "incremental: (?P<incremental>\w+), job threads: (?P<jobs>\d+), ColumnFamilies: (?P<cfs>.+), dataCenters: (?P<dc>.+), "
-                            "hosts: (?P<hosts>.+), # of ranges: (?P<ranges>\d+), pull repair: (?P<pullrepair>true|false)\)"))
+                            "hosts: (?P<hosts>.+), # of ranges: (?P<ranges>\d+)(, pull repair: (?P<pullrepair>true|false))?\)"))
+
         self.assertEqual(len(l), 1)
         line, m = l[0]
+
+        if supports_pull_repair:
+            self.assertEqual(m.group("pullrepair"), "false", "Pull repair cannot be enabled through the deprecated API so the pull repair option should always be false.")
+
         return {"parallelism": m.group("parallelism"),
                 "primary_range": m.group("pr"),
                 "incremental": m.group("incremental"),
@@ -168,5 +169,4 @@ class TestDeprecatedRepairAPI(Tester):
                 "column_families": m.group("cfs"),
                 "data_centers": m.group("dc"),
                 "hosts": m.group("hosts"),
-                "ranges": m.group("ranges"),
-                "pull_repair": m.group("pullrepair")}
+                "ranges": m.group("ranges")}

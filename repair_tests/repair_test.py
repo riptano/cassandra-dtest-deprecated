@@ -721,6 +721,7 @@ class TestRepair(BaseRepairTest):
 
         self._parameterized_range_repair(repair_opts=['-pr'])
 
+    @since('3.10')
     @no_vnodes()
     def pull_repair_test(self):
         """
