@@ -105,6 +105,10 @@ class BaseRepairTest(Tester):
 
         cluster.flush()
 
+        # Verify that node3 has only 2000 keys
+        debug("Checking data on node3...")
+        self.check_rows_on_node(node3, 2000, missings=[1000])
+
     def _repair_and_verify(self, sequential=True):
         cluster = self.cluster
         node1, node2, node3 = cluster.nodelist()
