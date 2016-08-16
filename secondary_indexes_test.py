@@ -294,7 +294,7 @@ class TestSecondaryIndexes(Tester):
         lookup_value = session.execute('select "C0" from standard1 limit 1')[0].C0
         session.execute('CREATE INDEX ix_c0 ON standard1("C0");')\
 
-        while not index_is_built(cluster, session, 'keyspace1', 'standard1', 'ix_c0'):
+        while not index_is_built(node1, session, 'keyspace1', 'standard1', 'ix_c0'):
             debug("waiting for index to build")
             time.sleep(1)
 
@@ -310,7 +310,7 @@ class TestSecondaryIndexes(Tester):
             index_sstables_dirs.append(index_sstables_dir)
 
         node1.nodetool("rebuild_index keyspace1 standard1 ix_c0")
-        while not index_is_built(cluster, session, 'keyspace1', 'standard1', 'ix_c0'):
+        while not index_is_built(node1, session, 'keyspace1', 'standard1', 'ix_c0'):
             debug("waiting for index to rebuild")
             time.sleep(1)
 
@@ -453,9 +453,10 @@ class TestSecondaryIndexes(Tester):
         session.execute("CREATE INDEX composites_index on ks.regular_table (b)")
 
         start = time.time()
-        while not index_is_built(cluster, session, 'ks', 'regular_table', 'composites_index') and time.time() + 10 < start:
-            debug("waiting for index to build")
-            time.sleep(1)
+        for node in cluster.nodelist():
+            while not index_is_built(node, session, 'ks', 'regular_table', 'composites_index') and time.time() + 10 < start:
+                debug("waiting for index to build")
+                time.sleep(1)
 
         insert_args = [(i, i % 2) for i in xrange(100)]
         execute_concurrent_with_args(session,
@@ -912,7 +913,7 @@ class TestSecondaryIndexesOnCollections(Tester):
             stmt = "CREATE INDEX user_uuids_values on map_index_search.users (uuids);"
             session.execute(stmt)
 
-        while not index_is_built(cluster, session, 'map_index_search', 'users', 'user_uuids_values'):
+        while not index_is_built(node1, session, 'map_index_search', 'users', 'user_uuids_values'):
             debug("waiting for index to build")
             time.sleep(1)
 
