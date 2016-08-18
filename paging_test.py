@@ -2171,7 +2171,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             # Range query with DISTINCT
             res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a >= 2 AND s >= 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[4, 4],
+            self.assertEqual(res, [[2, 2],
+                                   [4, 4],
                                    [3, 3]])
 
             # Range query with DISTINCT and LIMIT
