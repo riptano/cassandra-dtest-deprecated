@@ -2,9 +2,9 @@ import os
 import time
 
 import ccmlib.common
+import parse
 from ccmlib.node import ToolError
 
-import parse
 from dtest import Tester, debug
 from jmxutils import (JolokiaAgent, enable_jmx_ssl, make_mbean,
                       remove_perf_disable_shared_mem)

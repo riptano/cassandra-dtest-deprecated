@@ -3,10 +3,10 @@ import os
 import subprocess
 import time
 
+import parse
 from cassandra.util import sortedset
 from ccmlib import common
 
-import parse
 from dtest import DISABLE_VNODES, Tester, debug
 from tools.data import rows_to_list
 from tools.decorators import since
