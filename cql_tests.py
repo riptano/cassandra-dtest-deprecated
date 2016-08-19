@@ -19,7 +19,7 @@ from thrift_tests import get_thrift_client
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_none, assert_one, assert_unavailable)
 from tools.decorators import known_failure, since
-from utils.metadata_wrapper import (UpdatingClusterMetadataWrapper,
+from tools.metadata_wrapper import (UpdatingClusterMetadataWrapper,
                                     UpdatingKeyspaceMetadataWrapper,
                                     UpdatingTableMetadataWrapper)
 

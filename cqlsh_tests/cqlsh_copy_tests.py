@@ -28,7 +28,7 @@ from dtest import (DISABLE_VNODES, Tester, canReuseCluster, debug,
                    freshCluster, warning)
 from tools.data import rows_to_list
 from tools.decorators import known_failure, since
-from utils.metadata_wrapper import (UpdatingClusterMetadataWrapper,
+from tools.metadata_wrapper import (UpdatingClusterMetadataWrapper,
                                     UpdatingTableMetadataWrapper)
 
 PARTITIONERS = {
