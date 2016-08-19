@@ -285,9 +285,12 @@ class StorageProxyCQLTester(CQLTester):
 
         assert_one(session, "SELECT COUNT(*) FROM test7 WHERE kind = 'ev1'", [0])
 
+    @since('3.8')
     def partition_key_allow_filtering_test(self):
         """
-        Test for CASSANDRA-11031 : filter on part of partition keys
+        Filtering with unrestricted parts of partition keys
+
+        @jira_ticket CASSANDRA-11031
         """
         session = self.prepare()
 
@@ -300,8 +303,6 @@ class StorageProxyCQLTester(CQLTester):
                 PRIMARY KEY ((k1, k2), ck1)
             )
         """)
-
-        session.execute("TRUNCATE test_filter")
 
         session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 0, 0, 0)")
         session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (0, 0, 1, 0)")
@@ -321,87 +322,89 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("INSERT INTO test_filter (k1, k2, ck1, v) VALUES (1, 1, 3, 0)")
 
         # select test
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 ALLOW FILTERING"))),
-            [[0, 0, 0, 0],
-             [0, 0, 1, 0],
-             [0, 0, 2, 0],
-             [0, 0, 3, 0],
-             [0, 1, 0, 0],
-             [0, 1, 1, 0],
-             [0, 1, 2, 0],
-             [0, 1, 3, 0]])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k1 = 0 ALLOW FILTERING",
+                   [[0, 0, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 2, 0],
+                    [0, 0, 3, 0],
+                    [0, 1, 0, 0],
+                    [0, 1, 1, 0],
+                    [0, 1, 2, 0],
+                    [0, 1, 3, 0]],
+                   ignore_order=True)
 
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 <= 1 AND k2 >= 1 ALLOW FILTERING"))),
-            [[0, 1, 0, 0],
-             [0, 1, 1, 0],
-             [0, 1, 2, 0],
-             [0, 1, 3, 0],
-             [1, 1, 0, 0],
-             [1, 1, 1, 0],
-             [1, 1, 2, 0],
-             [1, 1, 3, 0]])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k1 <= 1 AND k2 >= 1 ALLOW FILTERING",
+                   [[0, 1, 0, 0],
+                    [0, 1, 1, 0],
+                    [0, 1, 2, 0],
+                    [0, 1, 3, 0],
+                    [1, 1, 0, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 2, 0],
+                    [1, 1, 3, 0]],
+                   ignore_order=True)
 
-        self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 2 ALLOW FILTERING")), [])
+        assert_none(session, "SELECT * FROM test_filter WHERE k1 = 2 ALLOW FILTERING")
+        assert_none(session, "SELECT * FROM test_filter WHERE k1 <=0 AND k2 > 1 ALLOW FILTERING")
 
-        self.assertEqual(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 <=0 AND k2 > 1 ALLOW FILTERING")), [])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k2 <= 0 ALLOW FILTERING",
+                   [[0, 0, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 2, 0],
+                    [0, 0, 3, 0],
+                    [1, 0, 0, 0],
+                    [1, 0, 1, 0],
+                    [1, 0, 2, 0],
+                    [1, 0, 3, 0]],
+                   ignore_order=True)
 
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 <= 0 ALLOW FILTERING"))),
-            [[0, 0, 0, 0],
-             [0, 0, 1, 0],
-             [0, 0, 2, 0],
-             [0, 0, 3, 0],
-             [1, 0, 0, 0],
-             [1, 0, 1, 0],
-             [1, 0, 2, 0],
-             [1, 0, 3, 0]])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k1 <= 0 AND k2 = 0 ALLOW FILTERING",
+                   [[0, 0, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 2, 0],
+                    [0, 0, 3, 0]])
 
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 <= 0 AND k2 = 0 ALLOW FILTERING"))),
-            [[0, 0, 0, 0],
-             [0, 0, 1, 0],
-             [0, 0, 2, 0],
-             [0, 0, 3, 0]])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k2 = 1 ALLOW FILTERING",
+                   [[0, 1, 0, 0],
+                    [0, 1, 1, 0],
+                    [0, 1, 2, 0],
+                    [0, 1, 3, 0],
+                    [1, 1, 0, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 2, 0],
+                    [1, 1, 3, 0]],
+                   ignore_order=True)
 
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 1 ALLOW FILTERING"))),
-            [[0, 1, 0, 0],
-             [0, 1, 1, 0],
-             [0, 1, 2, 0],
-             [0, 1, 3, 0],
-             [1, 1, 0, 0],
-             [1, 1, 1, 0],
-             [1, 1, 2, 0],
-             [1, 1, 3, 0]])
-
-        self.assertEqual(
-            rows_to_list(session.execute("SELECT * FROM test_filter WHERE k2 = 2 ALLOW FILTERING")),
-            [])
+        assert_none(session, "SELECT * FROM test_filter WHERE k2 = 2 ALLOW FILTERING")
 
         # filtering on both Partition Key and Clustering key
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 AND ck1=0 ALLOW FILTERING"))),
-            [[0, 0, 0, 0],
-             [0, 1, 0, 0]])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k1 = 0 AND ck1=0 ALLOW FILTERING",
+                   [[0, 0, 0, 0],
+                    [0, 1, 0, 0]],
+                   ignore_order=True)
 
-        self.assertEqual(
-            sorted(rows_to_list(session.execute("SELECT * FROM test_filter WHERE k1 = 0 AND k2=1 AND ck1=0 ALLOW FILTERING"))),
-            [[0, 1, 0, 0]])
+        assert_all(session,
+                   "SELECT * FROM test_filter WHERE k1 = 0 AND k2=1 AND ck1=0 ALLOW FILTERING",
+                   [[0, 1, 0, 0]])
 
         # count(*) test
-        self.assertEqual(rows_to_list(
-            session.execute("SELECT count(*) FROM test_filter WHERE k2 = 0 ALLOW FILTERING")),
-            [[8]])
+        assert_all(session,
+                   "SELECT count(*) FROM test_filter WHERE k2 = 0 ALLOW FILTERING",
+                   [[8]])
 
-        self.assertEqual(
-            rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 1 ALLOW FILTERING")),
-            [[8]])
+        assert_all(session,
+                   "SELECT count(*) FROM test_filter WHERE k2 = 1 ALLOW FILTERING",
+                   [[8]])
 
-        self.assertEqual(
-            rows_to_list(session.execute("SELECT count(*) FROM test_filter WHERE k2 = 2 ALLOW FILTERING")),
-            [[0]])
+        assert_all(session,
+                   "SELECT count(*) FROM test_filter WHERE k2 = 2 ALLOW FILTERING",
+                   [[0]])
 
         # test invalid query
         with self.assertRaises(InvalidRequest):

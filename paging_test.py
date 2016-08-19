@@ -2143,42 +2143,37 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             # Range queries
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a < 5 AND c = 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 2, 1, 2, 3],
-                                   [0, 2, 0, 2, 2],
-                                   [4, 2, 4, 2, 6],
-                                   [3, 2, 3, 2, 5]])
+            self.assertEqualIgnoreOrder(res, [[0, 2, 0, 2, 2],
+                                              [1, 2, 1, 2, 3],
+                                              [3, 2, 3, 2, 5],
+                                              [4, 2, 4, 2, 6]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a > 0 AND c > 1 AND c <= 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 2, 1, 2, 3],
-                                   [4, 2, 4, 2, 6],
-                                   [3, 2, 3, 2, 5]])
+            self.assertEqualIgnoreOrder(res, [[1, 2, 1, 2, 3],
+                                              [3, 2, 3, 2, 5],
+                                              [4, 2, 4, 2, 6]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a >= 2 AND c = 2 AND d > 4 ALLOW FILTERING"))
-            self.assertEqual(res, [[4, 2, 4, 2, 6],
-                                   [3, 2, 3, 2, 5]])
+            self.assertEqualIgnoreOrder(res, [[3, 2, 3, 2, 5],
+                                              [4, 2, 4, 2, 6]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a >= 2 AND c = 2 AND s > 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[4, 2, 4, 2, 6],
-                                   [3, 2, 3, 2, 5]])
+            self.assertEqualIgnoreOrder(res, [[3, 2, 3, 2, 5],
+                                              [4, 2, 4, 2, 6]])
 
             # Range queries with LIMIT
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a <= 1 AND c = 2 LIMIT 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 2, 1, 2, 3],
-                                   [0, 2, 0, 2, 2]])
+            self.assertEqualIgnoreOrder(res, [[0, 2, 0, 2, 2],
+                                              [1, 2, 1, 2, 3]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a <= 1 AND c = 2 AND s >= 1 LIMIT 2 ALLOW FILTERING"))
             self.assertEqual(res, [[1, 2, 1, 2, 3]])
 
             # Range query with DISTINCT
             res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a >= 2 AND s >= 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[2, 2],
-                                   [4, 4],
-                                   [3, 3]])
-
-            # Range query with DISTINCT and LIMIT
-            res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a <= 3 AND s >= 1 LIMIT 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 1],
-                                   [3, 3]])
+            self.assertEqualIgnoreOrder(res, [[2, 2],
+                                              [4, 4],
+                                              [3, 3]])
 
             # Single partition queries
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a <= 0 AND c >= 1 ALLOW FILTERING"))
@@ -2194,12 +2189,12 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             self.assertEqual(res, [[0, 1, 0, 1, 1]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a >= 3 AND c >= 1 AND s > 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[4, 1, 4, 1, 5],
-                                   [4, 2, 4, 2, 6],
-                                   [4, 3, 4, 3, 7],
-                                   [3, 1, 3, 1, 4],
-                                   [3, 2, 3, 2, 5],
-                                   [3, 3, 3, 3, 6]])
+            self.assertEqualIgnoreOrder(res, [[3, 1, 3, 1, 4],
+                                              [3, 2, 3, 2, 5],
+                                              [3, 3, 3, 3, 6],
+                                              [4, 1, 4, 1, 5],
+                                              [4, 2, 4, 2, 6],
+                                              [4, 3, 4, 3, 7]])
 
             # Single partition queries with LIMIT
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a < 1 AND c >= 1 LIMIT 2 ALLOW FILTERING"))
@@ -2220,6 +2215,35 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             # Single partition query with ORDER BY and LIMIT
             assert_invalid(session, "SELECT * FROM test WHERE a <= 0 AND c >= 1 ORDER BY b DESC LIMIT 2 ALLOW FILTERING", expected=InvalidRequest)
+
+    @since('3.8')
+    def test_paging_with_filtering_on_partition_key_with_limit(self):
+        """
+        test allow filtering on partition key
+        @jira_ticket CASSANDRA-11031
+        """
+
+        session = self.prepare()
+        self.create_ks(session, 'test_paging_with_filtering_on_pk_with_limit', 2)
+        session.execute("CREATE TABLE test (a int, b int, c int, s int static, d int, primary key ((a, b), c))")
+        session.row_factory = tuple_factory
+
+        for i in xrange(5):
+            session.execute("INSERT INTO test (a, b, s) VALUES ({}, {}, {})".format(i, 1, i))
+            session.execute("INSERT INTO test (a, b, s) VALUES ({}, {}, {})".format(i, 2, i + 1))
+            for j in xrange(10):
+                session.execute("INSERT INTO test (a, b, c, d) VALUES ({}, {}, {}, {})".format(i, 1, j, i + j))
+                session.execute("INSERT INTO test (a, b, c, d) VALUES ({}, {}, {}, {})".format(i, 2, j, i + j))
+
+        for page_size in (2, 3, 4, 5, 7, 10):
+            session.default_fetch_size = page_size
+
+            res = rows_to_list(session.execute("SELECT * FROM test WHERE a >=2 AND b = 2 LIMIT 4 ALLOW FILTERING"))
+            self.assertEqualIgnoreOrder(res,
+                                        [[2, 2, 0, 3, 2],
+                                         [2, 2, 1, 3, 3],
+                                         [2, 2, 2, 3, 4],
+                                         [2, 2, 3, 3, 5]])
 
     def _test_paging_with_filtering_on_partition_key_on_counter_columns(self, session, with_compact_storage):
         if with_compact_storage:

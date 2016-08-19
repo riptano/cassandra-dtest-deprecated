@@ -382,7 +382,7 @@ class TestUserTypes(Tester):
            """.format(id=_id)
 
         if self.cluster.version() >= '2.2':
-            assert_invalid(session, stmt, 'Partition key parts: name must be restricted as other parts are')
+            assert_invalid(session, stmt, 'Cannot execute this query as it might involve data filtering')
         else:
             assert_invalid(session, stmt, 'Partition key part name must be restricted since preceding part is')
 
