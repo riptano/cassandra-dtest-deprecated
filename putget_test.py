@@ -6,8 +6,9 @@ from thrift.transport import TSocket, TTransport
 
 import tools as tools
 from dtest import Tester
-from tools import (create_c1c2_table, known_failure, no_vnodes,
-                   retry_till_success)
+from tools.data import create_c1c2_table
+from tools.decorators import known_failure, no_vnodes
+from tools.misc import retry_till_success
 
 
 class TestPutGet(Tester):

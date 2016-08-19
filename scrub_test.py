@@ -5,12 +5,12 @@ import subprocess
 import time
 import uuid
 
-import parse
 from ccmlib import common
 
-from assertions import assert_length_equal
+import parse
+from tools.assertions import assert_length_equal
 from dtest import Tester, debug
-from tools import known_failure, since
+from tools.decorators import known_failure, since
 
 KEYSPACE = 'ks'
 

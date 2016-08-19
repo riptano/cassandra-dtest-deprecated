@@ -26,7 +26,8 @@ from cqlsh_tools import (DummyColorMap, assert_csvs_items_equal, csv_rows,
                          write_rows_to_csv)
 from dtest import (DISABLE_VNODES, Tester, canReuseCluster, debug,
                    freshCluster, warning)
-from tools import known_failure, rows_to_list, since
+from tools.data import rows_to_list
+from tools.decorators import known_failure, since
 from utils.metadata_wrapper import (UpdatingClusterMetadataWrapper,
                                     UpdatingTableMetadataWrapper)
 

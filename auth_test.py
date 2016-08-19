@@ -6,11 +6,11 @@ from cassandra import AuthenticationFailed, InvalidRequest, Unauthorized
 from cassandra.cluster import NoHostAvailable
 from cassandra.protocol import SyntaxException
 
-from assertions import (assert_all, assert_invalid, assert_one,
+from tools.assertions import (assert_all, assert_invalid, assert_one,
                         assert_unauthorized)
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
-from tools import since, known_failure
+from tools.decorators import known_failure, since
 
 
 class TestAuth(Tester):

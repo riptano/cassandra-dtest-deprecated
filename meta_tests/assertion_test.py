@@ -1,6 +1,6 @@
 from cassandra import AlreadyExists, Unavailable, InvalidRequest, Unauthorized
 from mock import Mock
-from assertions import (assert_one, assert_none, assert_exception, assert_unavailable,
+from tools.assertions import (assert_one, assert_none, assert_exception, assert_unavailable,
                         assert_invalid, assert_unauthorized, assert_all, assert_almost_equal,
                         assert_length_equal, assert_row_count)
 

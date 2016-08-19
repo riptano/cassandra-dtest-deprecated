@@ -16,7 +16,8 @@ from ccmlib.node import Node
 from nose.tools import assert_equal, assert_less_equal
 
 from dtest import Tester, debug
-from tools import rows_to_list, since, known_failure
+from tools.data import rows_to_list
+from tools.decorators import known_failure, since
 from utils.fileutils import size_of_files_in_dir
 from utils.funcutils import get_rate_limited_function
 

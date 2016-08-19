@@ -1,8 +1,8 @@
 import os
 
-from assertions import assert_crc_check_chance_equal
+from tools.assertions import assert_crc_check_chance_equal
 from scrub_test import TestHelper
-from tools import since
+from tools.decorator import since
 
 
 class TestCompression(TestHelper):

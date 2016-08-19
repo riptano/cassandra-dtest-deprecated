@@ -10,15 +10,16 @@ from unittest import skipIf
 from cassandra import ConsistencyLevel
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
-# TODO add in requirements.txt
-from enum import Enum  # Remove when switching to py3
+from nose.plugins.attrib import attr
 
-from assertions import (assert_all, assert_crc_check_chance_equal,
+from tools.assertions import (assert_all, assert_crc_check_chance_equal,
                         assert_invalid, assert_none, assert_one,
                         assert_unavailable)
 from dtest import Tester, debug
-from nose.plugins.attrib import attr
-from tools import known_failure, new_node, require, since
+# TODO add in requirements.txt
+from enum import Enum  # Remove when switching to py3
+from tools.decorators import known_failure, require, since
+from tools.misc import new_node
 
 # CASSANDRA-10978. Migration wait (in seconds) to use in bootstrapping tests. Needed to handle
 # pathological case of flushing schema keyspace for multiple data directories. See CASSANDRA-6696

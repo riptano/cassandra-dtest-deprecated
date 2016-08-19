@@ -4,7 +4,7 @@ from ccmlib.node import ToolError
 
 from dtest import Tester
 from jmxutils import apply_jmx_authentication
-from tools import since
+from tools.decorators import since
 
 
 @since('3.6')

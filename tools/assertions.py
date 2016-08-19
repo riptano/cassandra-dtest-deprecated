@@ -1,12 +1,12 @@
-from nose.tools import assert_regexp_matches, assert_equal, assert_false
-
-from cassandra import (InvalidRequest, ReadFailure,
-                       ReadTimeout, Unauthorized, Unavailable, WriteFailure,
-                       WriteTimeout)
-from cassandra.query import SimpleStatement
 from time import sleep
 
+from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
+                       Unavailable, WriteFailure, WriteTimeout)
+from cassandra.query import SimpleStatement
+from nose.tools import assert_equal, assert_false, assert_regexp_matches
+
 import tools
+
 
 """
 The assertion methods in this file are used to structure, execute, and test different queries and scenarios. Use these anytime you are trying
@@ -254,3 +254,7 @@ def assert_not_running(node):
         attempts = attempts + 1
 
     assert_false(node.is_running())
+
+
+def assert_read_timeout_or_failure(session, query):
+    assert_exception(session, query, expected=(ReadTimeout, ReadFailure))

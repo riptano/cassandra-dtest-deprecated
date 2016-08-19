@@ -3,12 +3,13 @@ import os
 import subprocess
 import time
 
-import parse
 from cassandra.util import sortedset
 from ccmlib import common
 
+import parse
 from dtest import DISABLE_VNODES, Tester, debug
-from tools import rows_to_list, since
+from tools.data import rows_to_list
+from tools.decorators import since
 
 
 @since('2.0.16', max_version='3.0.0')
