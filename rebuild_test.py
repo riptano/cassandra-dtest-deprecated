@@ -6,7 +6,7 @@ from ccmlib.node import ToolError
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import since
+from tools.decorators import since, no_vnodes
 from tools.misc import ImmutableMapping
 
 
@@ -282,6 +282,220 @@ class TestRebuild(Tester):
 
         # check data is sent by stopping node1
         node1.stop()
+        for i in xrange(0, keys):
+            query_c1c2(session, i, ConsistencyLevel.ONE)
+        # ks2 should not be streamed
+        session.execute('USE ks2')
+        for i in xrange(0, keys):
+            query_c1c2(session, i, ConsistencyLevel.ONE, tolerate_missing=True, must_be_missing=True)
+
+    @since('3.10')
+    @no_vnodes()
+    def disallow_rebuild_nonlocal_range(self):
+        """
+        @jira_ticket CASSANDRA-9875
+        Verifies that nodetool rebuild throws an error when an operator
+        attempts to rebuild a range that does not actually belong to the
+        current node
+
+        1. Set up a 3 node cluster
+        2. Create a new keyspace with replication factor 2
+        3. Run rebuild on node1 with a range that it does not own and assert that an error is raised
+        """
+        cluster = self.cluster
+        tokens = cluster.balanced_tokens(3)
+        cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
+        cluster.set_configuration_options(values={'num_tokens': 1})
+
+        node1 = cluster.create_node('node1', False,
+                                    ('127.0.0.1', 9160),
+                                    ('127.0.0.1', 7000),
+                                    '7100', '2000', tokens[0],
+                                    binary_interface=('127.0.0.1', 9042))
+        node1.set_configuration_options(values={'initial_token': tokens[0]})
+        cluster.add(node1, True)
+        node1 = cluster.nodelist()[0]
+
+        node2 = cluster.create_node('node2', False,
+                                    ('127.0.0.2', 9160),
+                                    ('127.0.0.2', 7000),
+                                    '7200', '2001', tokens[1],
+                                    binary_interface=('127.0.0.2', 9042))
+        node2.set_configuration_options(values={'initial_token': tokens[1]})
+        cluster.add(node2, True)
+        node2 = cluster.nodelist()[1]
+
+        node3 = cluster.create_node('node3', False,
+                                    ('127.0.0.3', 9160),
+                                    ('127.0.0.3', 7000),
+                                    '7300', '2002', tokens[2],
+                                    binary_interface=('127.0.0.3', 9042))
+        node3.set_configuration_options(values={'initial_token': tokens[2]})
+        cluster.add(node3, True)
+        node3 = cluster.nodelist()[2]
+
+        node1.start(wait_for_binary_proto=True)
+        node2.start(wait_for_binary_proto=True)
+        node3.start(wait_for_binary_proto=True)
+
+        session = self.patient_exclusive_cql_connection(node1)
+        session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
+
+        with self.assertRaises(ToolError) as cm:
+            node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (tokens[0], tokens[1]))
+
+        self.assertRegexpMatches(cm.exception.stdout, 'is not a range that is owned by this node')
+
+    @since('3.10')
+    @no_vnodes()
+    def disallow_rebuild_from_nonreplica(self):
+        """
+        @jira_ticket CASSANDRA-9875
+        Verifies that nodetool rebuild throws an error when an operator
+        attempts to rebuild a range and specifies sources that are not
+        replicas of that range.
+
+        1. Set up a 3 node cluster
+        2. Create a new keyspace with replication factor 2
+        3. Run rebuild on node1 with a specific range using a source that
+           does not own the range and assert that an error is raised
+        """
+        cluster = self.cluster
+        tokens = cluster.balanced_tokens(3)
+        cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
+        cluster.set_configuration_options(values={'num_tokens': 1})
+
+        node1 = cluster.create_node('node1', False,
+                                    ('127.0.0.1', 9160),
+                                    ('127.0.0.1', 7000),
+                                    '7100', '2000', tokens[0],
+                                    binary_interface=('127.0.0.1', 9042))
+        node1.set_configuration_options(values={'initial_token': tokens[0]})
+        cluster.add(node1, True)
+        node1 = cluster.nodelist()[0]
+
+        node2 = cluster.create_node('node2', False,
+                                    ('127.0.0.2', 9160),
+                                    ('127.0.0.2', 7000),
+                                    '7200', '2001', tokens[1],
+                                    binary_interface=('127.0.0.2', 9042))
+        node2.set_configuration_options(values={'initial_token': tokens[1]})
+        cluster.add(node2, True)
+        node2 = cluster.nodelist()[1]
+
+        node3 = cluster.create_node('node3', False,
+                                    ('127.0.0.3', 9160),
+                                    ('127.0.0.3', 7000),
+                                    '7300', '2002', tokens[2],
+                                    binary_interface=('127.0.0.3', 9042))
+        node3.set_configuration_options(values={'initial_token': tokens[2]})
+        cluster.add(node3, True)
+        node3 = cluster.nodelist()[2]
+
+        node1.start(wait_for_binary_proto=True)
+        node2.start(wait_for_binary_proto=True)
+        node3.start(wait_for_binary_proto=True)
+
+        node3_address = node3.network_interfaces['binary'][0]
+
+        session = self.patient_exclusive_cql_connection(node1)
+        session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
+
+        with self.assertRaises(ToolError) as cm:
+            node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (tokens[2], tokens[0], node3_address))
+
+        self.assertRegexpMatches(cm.exception.stdout, 'Unable to find sufficient sources for streaming range')
+
+    @since('3.10')
+    @no_vnodes()
+    def rebuild_with_specific_sources(self):
+        """
+        @jira_ticket CASSANDRA-9875
+        Verifies that an operator can specify specific sources to use
+        when rebuilding.
+
+        1. Set up a 2 node cluster across dc1 and dc2
+        2. Create new keyspaces with replication factor 2 (one replica in each datacenter)
+        4. Populate nodes with data
+        5. Create a new node in dc3 and update the keyspace replication
+        6. Run rebuild on the new node with a specific source in dc2
+        7. Assert that streaming only occurred between the new node and the specified source
+        8. Assert that the rebuild was successful by checking the data
+        """
+        keys = 1000
+
+        cluster = self.cluster
+        tokens = cluster.balanced_tokens_across_dcs(['dc1', 'dc2', 'dc3'])
+        cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
+        cluster.set_configuration_options(values={'num_tokens': 1})
+        node1 = cluster.create_node('node1', False,
+                                    ('127.0.0.1', 9160),
+                                    ('127.0.0.1', 7000),
+                                    '7100', '2000', tokens[0],
+                                    binary_interface=('127.0.0.1', 9042))
+        node1.set_configuration_options(values={'initial_token': tokens[0]})
+        cluster.add(node1, True, data_center='dc1')
+        node1 = cluster.nodelist()[0]
+        node2 = cluster.create_node('node2', False,
+                                    ('127.0.0.2', 9160),
+                                    ('127.0.0.2', 7000),
+                                    '7200', '2001', tokens[1],
+                                    binary_interface=('127.0.0.2', 9042))
+        node2.set_configuration_options(values={'initial_token': tokens[1]})
+        cluster.add(node2, True, data_center='dc2')
+        node2 = cluster.nodelist()[1]
+
+        # start nodes in dc1, dc2
+        node1.start(wait_for_binary_proto=True)
+        node2.start(wait_for_binary_proto=True)
+
+        # populate data in dc1, dc2
+        session = self.patient_exclusive_cql_connection(node1)
+        # ks1 will be rebuilt in node3
+        self.create_ks(session, 'ks1', {'dc1': 1, 'dc2': 1})
+        self.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
+        insert_c1c2(session, n=keys, consistency=ConsistencyLevel.ALL)
+        # ks2 will not be rebuilt in node3
+        self.create_ks(session, 'ks2', {'dc1': 1, 'dc2': 1})
+        self.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
+        insert_c1c2(session, n=keys, consistency=ConsistencyLevel.ALL)
+        session.shutdown()
+
+        # Bootstraping a new node in dc3 with auto_bootstrap: false
+        node3 = cluster.create_node('node3', False,
+                                    ('127.0.0.3', 9160),
+                                    ('127.0.0.3', 7000),
+                                    '7300', '2002', tokens[2],
+                                    binary_interface=('127.0.0.3', 9042))
+        node3.set_configuration_options(values={'initial_token': tokens[2]})
+        cluster.add(node3, False, data_center='dc3')
+        node3.start(wait_other_notice=True, wait_for_binary_proto=True)
+
+        # wait for snitch to reload
+        time.sleep(60)
+        # alter keyspace to replicate to dc3
+        session = self.patient_exclusive_cql_connection(node3)
+        session.execute("ALTER KEYSPACE ks1 WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'dc1':1, 'dc2':1, 'dc3':1};")
+        session.execute("ALTER KEYSPACE ks2 WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'dc1':1, 'dc2':1, 'dc3':1};")
+        session.execute('USE ks1')
+
+        node2_address = node2.network_interfaces['binary'][0]
+        node3_address = node3.network_interfaces['binary'][0]
+
+        # rebuild only ks1, restricting the source to node2
+        node3.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (tokens[2], str(pow(2, 63) - 1), node2_address))
+
+        # verify that node2 streamed to node3
+        log_matches = node2.grep_log('Session with /%s is complete' % node3_address)
+        self.assertTrue(len(log_matches) > 0)
+
+        # verify that node1 did not participate
+        log_matches = node1.grep_log('streaming plan for Rebuild')
+        self.assertEqual(len(log_matches), 0)
+
+        # check data is sent by stopping node1, node2
+        node1.stop()
+        node2.stop()
         for i in xrange(0, keys):
             query_c1c2(session, i, ConsistencyLevel.ONE)
         # ks2 should not be streamed
