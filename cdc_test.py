@@ -2,10 +2,12 @@ from __future__ import division
 
 import errno
 import os
+import re
 import shutil
 import time
 import uuid
 from collections import namedtuple
+from distutils.version import LooseVersion
 from itertools import izip as zip
 from itertools import repeat
 
@@ -15,7 +17,7 @@ from cassandra.concurrent import (execute_concurrent,
 from ccmlib.node import Node
 from nose.tools import assert_equal, assert_less_equal
 
-from dtest import Tester, debug
+from dtest import Tester, debug, warning
 from tools import rows_to_list, since, known_failure
 from utils.fileutils import size_of_files_in_dir
 from utils.funcutils import get_rate_limited_function
@@ -41,8 +43,12 @@ def _insert_rows(session, table_name, insert_stmt, values):
     return data_loaded
 
 
-def _move_contents(source_dir, dest_dir, verbose=True):
+def _move_commitlog_segments(source_dir, dest_dir, verbose=True):
     for source_filename in os.listdir(source_dir):
+        # skip any cdc index files and only move .log files
+        if '_cdc' in source_filename:
+            continue
+
         source_path, dest_path = (os.path.join(source_dir, source_filename),
                                   os.path.join(dest_dir, source_filename))
         if verbose:
@@ -472,7 +478,7 @@ class TestCDC(Tester):
     @known_failure(failure_source='test',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12286',
                    flaky=False)
-    def test_cdc_data_available_in_cdc_raw(self):
+    def test_cdc_replay(self):
         ks_name = 'ks'
         # First, create a new node just for data generation.
         generation_node, generation_session = self.prepare(ks_name=ks_name)
@@ -493,13 +499,20 @@ class TestCDC(Tester):
         # insert 10000 rows
         inserted_rows = _insert_rows(generation_session, cdc_table_info.name, cdc_table_info.insert_stmt, repeat((), 10000))
 
-        # drain the node to guarantee all cl segements will be recycled
+        # drain the node to guarantee all cl segments will be recycled
         debug('draining')
         generation_node.drain()
         debug('stopping')
         # stop the node and clean up all sessions attached to it
         generation_node.stop()
         generation_session.cluster.shutdown()
+
+        source_cdc_indexes = []
+        # We can rely on the existing _cdc.idx files to determine which .log files contain cdc data.
+        source_path = os.path.join(generation_node.get_path(), 'cdc_raw')
+        for seg in os.listdir(source_path):
+            if '_cdc' in seg:
+                source_cdc_indexes.append(ReplayData(source_path, seg))
 
         # create a new node to use for cdc_raw cl segment replay
         loading_node = self._init_new_loading_node(ks_name, cdc_table_info.create_stmt)
@@ -508,7 +521,7 @@ class TestCDC(Tester):
         # node again to trigger commitlog replay, which should replay the
         # cdc_raw files we moved to commitlogs into memtables.
         debug('moving cdc_raw and restarting node')
-        _move_contents(
+        _move_commitlog_segments(
             os.path.join(generation_node.get_path(), 'cdc_raw'),
             os.path.join(loading_node.get_path(), 'commitlogs')
         )
@@ -525,6 +538,7 @@ class TestCDC(Tester):
         debug('found {cdc} values in CDC table'.format(
             cdc=len(data_in_cdc_table_after_restart)
         ))
+
         # Then we assert that the CDC data that we expect to be there is there.
         # All data that was in CDC tables should have been copied to cdc_raw,
         # then used in commitlog replay, so it should be back in the cluster.
@@ -535,3 +549,78 @@ class TestCDC(Tester):
             # of items, so we print something else here
             msg='not all expected data selected'
         )
+
+        if (LooseVersion(self.cluster.version()) >= LooseVersion('3.10')):
+            dest_cdc_indexes = []
+            # Create ReplayData objects for each index file found in loading cluster
+            loading_path = os.path.join(loading_node.get_path(), 'cdc_raw')
+            for seg in os.listdir(loading_path):
+                if '_cdc' not in seg:
+                    continue
+
+                rd = ReplayData(loading_path, seg)
+                dest_cdc_indexes.append(rd)
+
+            # Compare source replay data to dest to ensure replay process created both hard links and index files.
+            for srd in source_cdc_indexes:
+                # Confirm both log and index are in dest
+                idx_file = srd.idx_name
+                log_file = srd.log_name()
+                assert os.path.isfile(os.path.join(loading_path, idx_file)),\
+                    'Failed to find cdc index file on loading cluster: ' + idx_file
+                assert os.path.isfile(os.path.join(loading_path, log_file)),\
+                    'Failed to find cdc log file on loading cluster: ' + log_file
+
+                # Find dest ReplayData that corresponds to the source
+                drd = None
+                for dest_replay_data in dest_cdc_indexes:
+                    if dest_replay_data.idx_name == srd.idx_name:
+                        drd = dest_replay_data
+                    if drd is not None:
+                        break
+                assert drd is not None, 'Did not find dest replay data to match source: ' + str(srd)
+                dest_cdc_indexes.remove(drd)
+
+                # We can't compare equality on offsets since replay uses the raw file length as the written
+                # cdc offset. We *can*, however, confirm that the offset in the replayed file is >=
+                # the source file, ensuring clients are signaled to replay at least all the data in the
+                # log.
+                assert int(drd.offset) >= int(srd.offset),\
+                    'Offset in dest not >= source. src: ' + str(srd) + ' dest: ' + str(drd)
+
+                # Confirm completed flag is the same in both
+                assert srd.completed == drd.completed,\
+                    'completed flag in dest != source. src: ' + str(srd) + ' dest: ' + str(drd)
+
+            # Confirm we don't have any extra cdc indexes created we don't expect
+            if len(dest_cdc_indexes) != 0:
+                warning('Found unexpected cdc indexes on dest cluster.')
+                for drd in dest_cdc_indexes:
+                    warning(str(drd))
+                assert len(dest_cdc_indexes) == 0
+
+
+# Replay data class containing data from the passed in _cdc.idx file
+class ReplayData:
+    idx_name = 'Unknown'
+    completed = 'No'
+    offset = 0
+
+    def __init__(self, path, name):
+        assert '_cdc' in name, 'expected to find _cdc in passed in index name. Did not: ' + name
+        self.idx_name = name
+
+        try:
+            f = open(os.path.join(path, name), 'r')
+            self.offset = str.strip(f.readline())
+            self.completed = str.strip(f.readline())
+        finally:
+            f.close()
+
+    def log_name(self):
+        # Strip off _cdc.idx, replace with .log
+        stripped = re.sub('_cdc.idx', '.log', self.idx_name)
+        return stripped
+
+    def __str__(self):
+        return 'idx_name: ' + self.idx_name + ' log_name: ' + self.log_name() + ' offset: ' + self.offset + ' completed: ' + self.completed
