@@ -5,8 +5,6 @@ from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
 from cassandra.query import SimpleStatement
 from nose.tools import assert_equal, assert_false, assert_regexp_matches
 
-from tools.data import rows_to_list
-
 
 """
 The assertion methods in this file are used to structure, execute, and test different queries and scenarios. Use these anytime you are trying
@@ -39,6 +37,11 @@ or, maybe after shutting down all the nodes, we want to assert an Unavailable ex
     assert_exception(session, "SELECT * FROM test", expected=Unavailable)
 
 """
+
+
+def _rows_to_list(rows):
+    new_list = [list(row) for row in rows]
+    return new_list
 
 
 def _assert_exception(fun, *args, **kwargs):
@@ -120,7 +123,7 @@ def assert_one(session, query, expected, cl=None):
     """
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
-    list_res = rows_to_list(res)
+    list_res = _rows_to_list(res)
     assert list_res == [expected], "Expected {} from {}, but got {}".format([expected], query, list_res)
 
 
@@ -137,7 +140,7 @@ def assert_none(session, query, cl=None):
     """
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
-    list_res = rows_to_list(res)
+    list_res = _rows_to_list(res)
     assert list_res == [], "Expected nothing from {}, but got {}".format(query, list_res)
 
 
@@ -156,7 +159,7 @@ def assert_all(session, query, expected, cl=None, ignore_order=False):
     """
     simple_query = SimpleStatement(query, consistency_level=cl)
     res = session.execute(simple_query)
-    list_res = rows_to_list(res)
+    list_res = _rows_to_list(res)
     if ignore_order:
         expected = sorted(expected)
         list_res = sorted(list_res)
