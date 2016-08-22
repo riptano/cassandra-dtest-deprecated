@@ -12,12 +12,12 @@ from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 from nose.plugins.attrib import attr
 
-from tools.assertions import (assert_all, assert_crc_check_chance_equal,
-                        assert_invalid, assert_none, assert_one,
-                        assert_unavailable)
 from dtest import Tester, debug
 # TODO add in requirements.txt
 from enum import Enum  # Remove when switching to py3
+from tools.assertions import (assert_all, assert_crc_check_chance_equal,
+                              assert_invalid, assert_none, assert_one,
+                              assert_unavailable)
 from tools.decorators import known_failure, require, since
 from tools.misc import new_node
 
