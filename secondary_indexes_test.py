@@ -14,7 +14,8 @@ from cassandra.query import BatchStatement, SimpleStatement
 from dtest import (DISABLE_VNODES, OFFHEAP_MEMTABLES, DtestTimeoutError,
                    Tester, debug, index_is_built)
 from tools.assertions import assert_invalid, assert_one, assert_row_count
-from tools.decorators import known_failure, rows_to_list, since
+from tools.data import rows_to_list
+from tools.decorators import known_failure, since
 
 
 class TestSecondaryIndexes(Tester):
