@@ -582,6 +582,9 @@ class AbortedQueriesTester(CQLTester):
     #      more than one value.
     """
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12514',
+                   flaky=False)
     def local_query_test(self):
         """
         Check that a query running on the local coordinator node times out:
@@ -918,9 +921,6 @@ class SlowQueryTester(CQLTester):
         node2.watch_log_for("operations were slow", from_mark=mark, filename='system.log', timeout=60)
         node2.watch_log_for("SELECT \* FROM ks.test2", from_mark=debug_mark, filename='debug.log', timeout=60)
 
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12514',
-                   flaky=False)
     def disable_slow_query_log_test(self):
         """
         Check that a query is NOT reported as slow if slow query logging is disabled.
