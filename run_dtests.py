@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Usage: runner.py [--nose-options NOSE_OPTIONS] [TESTS...] [--vnodes VNODES_OPTIONS...]
+Usage: run_dtests.py [--nose-options NOSE_OPTIONS] [TESTS...] [--vnodes VNODES_OPTIONS...]
                  [--runner-debug | --runner-quiet] [--dry-run]
 
 nosetests options:
