@@ -14,6 +14,11 @@ script configuration options:
 cluster configuration options:
     --vnodes VNODES_OPTIONS...   specify whether to run with or without vnodes.
                                  valid values: 'true' and 'false'
+
+example:
+    The following command will execute nosetests with the '-v' (verbose) option, vnodes disabled, and run a single test:
+    ./run_dtests.py --nose-options -v --vnodes false repair_tests/repair_test.py:TestRepair.token_range_repair_test_with_cf
+
 """
 from __future__ import print_function
 
