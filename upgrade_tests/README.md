@@ -20,7 +20,7 @@ which should be supported. This gives us testing with a pattern of "write once, 
 
 ### The manifest
 
-__upgrade_manifest.py__ contains metadata and tools concerned with
+[upgrade_manifest.py](upgrade_manifest.py) contains metadata and tools concerned with
 which upgrade paths to test, and where to find their source. This centralized
 location is updated when we need to make changes to which version paths are
 upgradeable, and how to find those versions (e.g. via a git tag). This file also
@@ -78,7 +78,7 @@ by calling the __build_upgrade_pairs__ method, which returns a list of upgrade
 in upgrade nomenclature a variant value of 'current'), and a ending version (typically
 an unreleased version, or in upgrade nomenclature a variant value of 'indev').
 
-Second, with each upgrade pair, we can then generate a class to test that upgrade.
+Finally, with each upgrade pair known, we then generate a class to test that upgrade.
 
 ### Impact of test runtime environment
 
@@ -94,7 +94,7 @@ When inspecting the test environment to determine which test cases are relevant,
 code also grabs the current git sha, and that particular sha is used as the version
 to upgrade to in each relevant case.
 
-(Prior to this system of 'pinning' to a particular git sha, the tests instead would upgrade to some static code ref like 'cassandra-3.0', which usually differed from the actual
+(Prior to this system of 'pinning' to the current env's git sha, the tests instead would upgrade to some static code ref like 'cassandra-3.0', which usually differed from the actual
 code under test. This old way of testing static versions made interpreting results
 confusing.)
 
@@ -103,9 +103,9 @@ confusing.)
 The upgrade testing toolkit makes for relatively painless addition of tests in
 existing classes. The basic procedure is to find the correct class, and create a
 new method there. For example, to test a specific cql behavior, edit the
-upgrade_tests/cql_tests.py module and add a new method to the TestCQL class. The
+[cql_tests.py](cql_tests.py) module and add a new method to the TestCQL class. The
 example below assumes the method is being added to a class which extends
-upgrade_base.py:UpgradeTester (this isn't strictly required; one could also choose
+[upgrade_base.py](upgrade_base.py):UpgradeTester (this isn't strictly required; one could also choose
 to implement their own class and helpers):
 
     def test_some_new_feature(self):
@@ -132,19 +132,18 @@ Though that can be very verbose! To reduce the output a bit, you can use somethi
 # Adding a new test module
 
 This procedure is very similar to adding a single test, but requires a little bit more work.
-In the above example, the cql_tests.py module has already been built to do the necessary
-code generation covering the various upgrade paths, and that module is a good reference for
-seeing how the code generation works.
+In the above example, the [cql_tests.py](cql_tests.py) module has already been built to do the necessary code generation covering the various upgrade paths, and that module is a good reference for seeing how the code generation works (see the end of the file).
 
 The basic module creation procedure:
 
 - Add the new module file.
-- Add one or many classes to the module file, most typically extending upgrade_base.py:UpgradeTester
-- If you don't extend UpgradeTester, generally you want the base class to set ```__test__ = False```. This will prevent nosetests from directly running the test cases in the base class since the class is intended to act as a template and not be directly executed (its generated subclasses will be run directly, however).
+- Add one or many classes to the module file, most typically extending [upgrade_base.py](upgrade_base.py):UpgradeTester
+- If you don't extend UpgradeTester, set ```__test__ = False```. This will prevent
+nosetests from directly running the base class as a test, since the class is intended
+to act as a template and not be directly executed.
 - At the end of the module, you'll query the supported upgrade manifest using
-upgrade_manifest.py:build_upgrade_pairs. Similar to cql_tests.py you'll probably
-want to combine the upgrade paths with other configurations for a more complete
-test matrix. Don't forget to do the class gen for each class in your module.
+[upgrade_manifest.py](upgrade_manifest.py):build_upgrade_pairs. Similar to [cql_tests.py](cql_tests.py) you'll probably want to combine the upgrade paths with other configurations for a more complete test matrix. Don't forget to do the class gen
+for each class in your module.
 - To accomplish the actual code gen, it's easiest to look at some examples and borrow
 logic from another implemented module. The code is a bit difficult to follow, but
 it's purpose is pretty straightforward which is just to build a bunch of classes
