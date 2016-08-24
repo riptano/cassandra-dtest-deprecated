@@ -190,6 +190,8 @@ class TestBatch(Tester):
             APPLY BATCH
         """, consistency_level=ConsistencyLevel.ANY)
         session.execute(query)
+
+        self.cluster.nodelist()[-1].start(wait_other_notice=True)
         assert_all(session, "SELECT * FROM users", [[1, u'Will', u'Turner'], [0, u'Jack', u'Sparrow']])
 
     @known_failure(failure_source='test',
