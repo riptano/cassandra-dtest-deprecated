@@ -5,9 +5,9 @@ from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from cassandra.util import sortedset
 
-from tools.assertions import (assert_all, assert_almost_equal, assert_none,
-                        assert_row_count, assert_unavailable)
 from dtest import Tester, debug
+from tools.assertions import (assert_all, assert_almost_equal, assert_none,
+                              assert_row_count, assert_unavailable)
 from tools.decorators import since
 
 
