@@ -8,11 +8,11 @@ from cassandra.policies import FallthroughRetryPolicy
 from cassandra.query import (SimpleStatement, dict_factory,
                              named_tuple_factory, tuple_factory)
 
-from datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from dtest import Tester, debug, run_scenarios
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_one)
 from tools.data import rows_to_list
+from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.decorators import known_failure, since
 from tools.paging import PageAssertionMixin, PageFetcher
 
