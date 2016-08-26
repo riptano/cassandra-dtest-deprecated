@@ -557,15 +557,10 @@ class TestCDC(Tester):
         )
 
         if LooseVersion(self.cluster.version()) >= LooseVersion('3.10'):
-            dest_cdc_indexes = []
             # Create ReplayData objects for each index file found in loading cluster
             loading_path = os.path.join(loading_node.get_path(), 'cdc_raw')
-            for seg in os.listdir(loading_path):
-                if '_cdc' not in seg:
-                    continue
-
-                rd = ReplayData(loading_path, seg)
-                dest_cdc_indexes.append(rd)
+            dest_cdc_indexes = [ReplayData(loading_path, name)
+                                for name in os.listdir(loading_path) if '_cdc' in name]
 
             # Compare source replay data to dest to ensure replay process created both hard links and index files.
             for srd in source_cdc_indexes:
