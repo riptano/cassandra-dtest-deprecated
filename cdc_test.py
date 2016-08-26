@@ -517,7 +517,7 @@ class TestCDC(Tester):
 
         # We can rely on the existing _cdc.idx files to determine which .log files contain cdc data.
         source_path = os.path.join(generation_node.get_path(), 'cdc_raw')
-        source_cdc_indexes = [ReplayData(source_path, name)
+        source_cdc_indexes = [ReplayData.load(source_path, name)
                               for name in source_path if '_cdc' in name]
 
         # create a new node to use for cdc_raw cl segment replay
@@ -559,14 +559,14 @@ class TestCDC(Tester):
         if LooseVersion(self.cluster.version()) >= LooseVersion('3.10'):
             # Create ReplayData objects for each index file found in loading cluster
             loading_path = os.path.join(loading_node.get_path(), 'cdc_raw')
-            dest_cdc_indexes = [ReplayData(loading_path, name)
+            dest_cdc_indexes = [ReplayData.load(loading_path, name)
                                 for name in os.listdir(loading_path) if '_cdc' in name]
 
             # Compare source replay data to dest to ensure replay process created both hard links and index files.
             for srd in source_cdc_indexes:
                 # Confirm both log and index are in dest
                 idx_file = srd.idx_name
-                log_file = srd.log_name()
+                log_file = srd.log_name
                 assert os.path.isfile(os.path.join(loading_path, idx_file)),\
                     'Failed to find cdc index file on loading cluster: ' + idx_file
                 assert os.path.isfile(os.path.join(loading_path, log_file)),\
@@ -601,27 +601,20 @@ class TestCDC(Tester):
                 assert len(dest_cdc_indexes) == 0
 
 
-# Replay data class containing data from the passed in _cdc.idx file
-class ReplayData:
-    idx_name = 'Unknown'
-    completed = 'No'
-    offset = 0
+class ReplayData(namedtuple('_ReplayDataBase', ['idx_name', 'completed', 'offset', 'log_name'])):
+    """
+    Replay data class containing data from a _cdc.idx file. Build one with the load method.
+    """
 
-    def __init__(self, path, name):
+    @classmethod
+    def load(cls, path, name):
         assert '_cdc' in name, 'expected to find _cdc in passed in index name. Did not: ' + name
-        self.idx_name = name
+        with open(os.path.join(path, name), 'r') as f:
+            offset, completed = [line.strip() for line in f.readlines()]
 
-        try:
-            f = open(os.path.join(path, name), 'r')
-            self.offset = str.strip(f.readline())
-            self.completed = str.strip(f.readline())
-        finally:
-            f.close()
-
-    def log_name(self):
-        # Strip off _cdc.idx, replace with .log
-        stripped = re.sub('_cdc.idx', '.log', self.idx_name)
-        return stripped
-
-    def __str__(self):
-        return 'idx_name: ' + self.idx_name + ' log_name: ' + self.log_name() + ' offset: ' + self.offset + ' completed: ' + self.completed
+        return cls(
+            idx_name=name,
+            completed=completed,
+            offset=offset,
+            log_name=re.sub('_cdc.idx', '.log', name)
+        )
