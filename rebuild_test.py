@@ -307,42 +307,20 @@ class TestRebuild(Tester):
         cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
         cluster.set_configuration_options(values={'num_tokens': 1})
 
-        node1 = cluster.create_node('node1', False,
-                                    ('127.0.0.1', 9160),
-                                    ('127.0.0.1', 7000),
-                                    '7100', '2000', tokens[0],
-                                    binary_interface=('127.0.0.1', 9042))
-        node1.set_configuration_options(values={'initial_token': tokens[0]})
-        cluster.add(node1, True)
-        node1 = cluster.nodelist()[0]
+        cluster.populate(3)
+        node1, node2, node3 = cluster.nodelist()
 
-        node2 = cluster.create_node('node2', False,
-                                    ('127.0.0.2', 9160),
-                                    ('127.0.0.2', 7000),
-                                    '7200', '2001', tokens[1],
-                                    binary_interface=('127.0.0.2', 9042))
-        node2.set_configuration_options(values={'initial_token': tokens[1]})
-        cluster.add(node2, True)
-        node2 = cluster.nodelist()[1]
-
-        node3 = cluster.create_node('node3', False,
-                                    ('127.0.0.3', 9160),
-                                    ('127.0.0.3', 7000),
-                                    '7300', '2002', tokens[2],
-                                    binary_interface=('127.0.0.3', 9042))
-        node3.set_configuration_options(values={'initial_token': tokens[2]})
-        cluster.add(node3, True)
-        node3 = cluster.nodelist()[2]
-
-        node1.start(wait_for_binary_proto=True)
-        node2.start(wait_for_binary_proto=True)
-        node3.start(wait_for_binary_proto=True)
+        node1_token, node2_token, node3_token = tokens[:3]
+        node1.set_configuration_options(values={'initial_token': node1_token})
+        node2.set_configuration_options(values={'initial_token': node2_token})
+        node3.set_configuration_options(values={'initial_token': node3_token})
+        cluster.start(wait_for_binary_proto=True)
 
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
         with self.assertRaises(ToolError) as cm:
-            node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (tokens[0], tokens[1]))
+            node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
 
         self.assertRegexpMatches(cm.exception.stdout, 'is not a range that is owned by this node')
 
