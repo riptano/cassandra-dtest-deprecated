@@ -17,7 +17,8 @@ from cassandra.concurrent import (execute_concurrent,
 from ccmlib.node import Node
 from nose.tools import assert_equal, assert_less_equal
 
-from dtest import Tester, create_ks, debug, warning
+from dtest import Tester, debug, create_ks
+from tools.assertions import assert_length_equal
 from tools.data import rows_to_list
 from tools.decorators import known_failure, since
 from tools.files import size_of_files_in_dir
@@ -565,40 +566,29 @@ class TestCDC(Tester):
             # Compare source replay data to dest to ensure replay process created both hard links and index files.
             for srd in source_cdc_indexes:
                 # Confirm both log and index are in dest
-                idx_file = srd.idx_name
-                log_file = srd.log_name
-                assert os.path.isfile(os.path.join(loading_path, idx_file)),\
-                    'Failed to find cdc index file on loading cluster: ' + idx_file
-                assert os.path.isfile(os.path.join(loading_path, log_file)),\
-                    'Failed to find cdc log file on loading cluster: ' + log_file
+                self.assertTrue(os.path.isfile(os.path.join(loading_path, srd.idx_name)))
+                self.assertTrue(os.path.isfile(os.path.join(loading_path, srd.log_name)))
 
-                # Find dest ReplayData that corresponds to the source
-                drd = None
-                for dest_replay_data in dest_cdc_indexes:
-                    if dest_replay_data.idx_name == srd.idx_name:
-                        drd = dest_replay_data
-                    if drd is not None:
-                        break
-                assert drd is not None, 'Did not find dest replay data to match source: ' + str(srd)
-                dest_cdc_indexes.remove(drd)
+                # Find dest ReplayData that corresponds to the source (should be exactly 1)
+                corresponding_dest_replay_datae = [x for x in dest_cdc_indexes
+                                                   if srd.idx_name == x.idx_name]
+                assert_length_equal(corresponding_dest_replay_datae, 1)
+                drd = corresponding_dest_replay_datae[0]
 
                 # We can't compare equality on offsets since replay uses the raw file length as the written
                 # cdc offset. We *can*, however, confirm that the offset in the replayed file is >=
                 # the source file, ensuring clients are signaled to replay at least all the data in the
                 # log.
-                assert int(drd.offset) >= int(srd.offset),\
-                    'Offset in dest not >= source. src: ' + str(srd) + ' dest: ' + str(drd)
+                self.assertGreaterEqual(drd.offset, srd.offset)
 
                 # Confirm completed flag is the same in both
-                assert srd.completed == drd.completed,\
-                    'completed flag in dest != source. src: ' + str(srd) + ' dest: ' + str(drd)
+                self.assertEqual(srd.completed, drd.completed)
 
             # Confirm we don't have any extra cdc indexes created we don't expect
-            if len(dest_cdc_indexes) != 0:
-                warning('Found unexpected cdc indexes on dest cluster.')
-                for drd in dest_cdc_indexes:
-                    warning(str(drd))
-                assert len(dest_cdc_indexes) == 0
+            self.assertLessEqual(
+                {dest_rd.idx_name for dest_rd in dest_cdc_indexes},
+                {source_rd.idx_name for source_rd in source_cdc_indexes},
+            )
 
 
 class ReplayData(namedtuple('_ReplayDataBase', ['idx_name', 'completed', 'offset', 'log_name'])):
@@ -615,6 +605,6 @@ class ReplayData(namedtuple('_ReplayDataBase', ['idx_name', 'completed', 'offset
         return cls(
             idx_name=name,
             completed=completed,
-            offset=offset,
+            offset=int(offset),
             log_name=re.sub('_cdc.idx', '.log', name)
         )
