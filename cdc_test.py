@@ -556,7 +556,7 @@ class TestCDC(Tester):
             msg='not all expected data selected'
         )
 
-        if (LooseVersion(self.cluster.version()) >= LooseVersion('3.10')):
+        if LooseVersion(self.cluster.version()) >= LooseVersion('3.10'):
             dest_cdc_indexes = []
             # Create ReplayData objects for each index file found in loading cluster
             loading_path = os.path.join(loading_node.get_path(), 'cdc_raw')
