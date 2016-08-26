@@ -47,11 +47,7 @@ def _insert_rows(session, table_name, insert_stmt, values):
 
 
 def _move_commitlog_segments(source_dir, dest_dir, verbose=True):
-    for source_filename in os.listdir(source_dir):
-        # skip any cdc index files and only move .log files
-        if '_cdc' in source_filename:
-            continue
-
+    for source_filename in [name for name in os.listdir(source_dir) if '_cdc' not in name]:
         source_path, dest_path = (os.path.join(source_dir, source_filename),
                                   os.path.join(dest_dir, source_filename))
         if verbose:
