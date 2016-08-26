@@ -1,6 +1,5 @@
 
 import re
-
 from time import sleep
 
 from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
@@ -8,8 +7,6 @@ from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
 from cassandra.query import SimpleStatement
 from nose.tools import (assert_equal, assert_false, assert_regexp_matches,
                         assert_true)
-
-
 
 
 """
@@ -267,6 +264,7 @@ def assert_not_running(node):
 
 def assert_read_timeout_or_failure(session, query):
     assert_exception(session, query, expected=(ReadTimeout, ReadFailure))
+
 
 def assert_stderr_clean(err, acceptable_errors=None):
     """
