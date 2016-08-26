@@ -8,9 +8,8 @@ import uuid
 import parse
 from ccmlib import common
 
-from assertions import assert_length_equal, assert_stderr_clean
 from dtest import Tester, debug
-from tools.assertions import assert_length_equal
+from tools.assertions import assert_length_equal, assert_stderr_clean
 from tools.decorators import known_failure, since
 
 KEYSPACE = 'ks'
