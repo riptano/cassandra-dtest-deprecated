@@ -319,10 +319,8 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with self.assertRaises(ToolError) as cm:
+        with self.assertRaisesRegexp(ToolError, 'is not a range that is owned by this node'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
-
-        self.assertRegexpMatches(cm.exception.stdout, 'is not a range that is owned by this node')
 
     @since('3.10')
     @no_vnodes()
