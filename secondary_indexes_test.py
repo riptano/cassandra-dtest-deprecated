@@ -16,7 +16,6 @@ from dtest import (DISABLE_VNODES, OFFHEAP_MEMTABLES, DtestTimeoutError,
 from tools.assertions import assert_bootstrap_state, assert_invalid, assert_one, assert_row_count
 from tools.data import index_is_built, rows_to_list
 from tools.decorators import known_failure, since
-from tools.intervention import InterruptBootstrap
 from tools.misc import new_node
 
 
@@ -1017,18 +1016,22 @@ class TestUpgradeSecondaryIndexes(Tester):
             node.start(wait_other_notice=True)
             # node.nodetool('upgradesstables -a')
 
+
 class TestPreJoinCallback(Tester):
 
     def __init__(self, *args, **kwargs):
         # Ignore these log patterns:
         self.ignore_log_patterns = [
-            # Ignore streaming error during bootstrap
+            # ignore all streaming errors during bootstrap
             r'Exception encountered during startup',
-            r'Streaming error occurred'
+            r'Streaming error occurred',
+            r'\[Stream.*\] Streaming error occurred',
+            r'\[Stream.*\] Remote peer 127.0.0.\d failed stream session',
+            r'Error while waiting on bootstrap to complete. Bootstrap will have to be restarted.'
         ]
         Tester.__init__(self, *args, **kwargs)
 
-    def _base_test(self, timeout, joinFn):
+    def _base_test(self, joinFn):
         cluster = self.cluster
         tokens = cluster.balanced_tokens(2)
         cluster.set_configuration_options(values={'num_tokens': 1})
@@ -1036,7 +1039,7 @@ class TestPreJoinCallback(Tester):
         # Create a single node cluster
         cluster.populate(1)
         node1 = cluster.nodelist()[0]
-        node1.set_configuration_options(values={'initial_token': tokens[0], 'streaming_socket_timeout_in_ms': timeout})
+        node1.set_configuration_options(values={'initial_token': tokens[0]})
         cluster.start(wait_other_notice=True)
 
         # Create a table with 2i
@@ -1045,8 +1048,7 @@ class TestPreJoinCallback(Tester):
         self.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
         session.execute("CREATE INDEX c2_idx ON cf (c2);")
 
-        # Insert enough data to later allow to interrupt bootstrapping
-        keys = 1000000
+        keys = 10000
         insert_statement = session.prepare("INSERT INTO ks.cf (key, c1, c2) VALUES (?, 'value1', 'value2')")
         execute_concurrent_with_args(session, insert_statement, [['k%d' % k] for k in range(keys)])
 
@@ -1061,27 +1063,29 @@ class TestPreJoinCallback(Tester):
             node2.start(wait_for_binary_proto=True)
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(600000, bootstrap)
+        self._base_test(bootstrap)
 
     @since('3.0')
     def resume_test(self):
         def resume(cluster, token):
             node1 = cluster.nodes['node1']
+            # set up byteman on node1 to inject a failure when streaming to node2
+            node1.stop(wait=True)
+            node1.byteman_port = '8100'
+            node1.import_config_files()
+            node1.start(wait_for_binary_proto=True)
+            node1.byteman_submit(['./byteman/inject_failure_streaming_to_node2.btm'])
+
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token, 'streaming_socket_timeout_in_ms': 1000})
-            t = InterruptBootstrap(node1)
-            t.start()
             node2.start(wait_other_notice=False, wait_for_binary_proto=True)
-            t.join()
             assert_bootstrap_state(self, node2, 'IN_PROGRESS')
-
-            node1.start(wait_for_binary_proto=True)
 
             node2.nodetool("bootstrap resume")
             assert_bootstrap_state(self, node2, 'COMPLETED')
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(1000, resume)
+        self._base_test(resume)
 
     @since('3.0')
     def manual_join_test(self):
@@ -1095,7 +1099,7 @@ class TestPreJoinCallback(Tester):
             node2.nodetool("join")
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(600000, manual_join)
+        self._base_test(manual_join)
 
     @since('3.0')
     def write_survey_test(self):
@@ -1110,4 +1114,4 @@ class TestPreJoinCallback(Tester):
             self.assertTrue(node2.grep_log('Leaving write survey mode and joining ring at operator request'))
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
-        self._base_test(600000, write_survey_and_join)
+        self._base_test(write_survey_and_join)
