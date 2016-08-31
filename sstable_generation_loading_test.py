@@ -5,9 +5,10 @@ from distutils import dir_util
 
 from ccmlib import common as ccmcommon
 
-from tools.assertions import assert_one
 from dtest import Tester, debug
+from tools.assertions import assert_one
 from tools.decorators import known_failure
+from tools.misc import ImmutableMapping
 
 
 # WARNING: sstableloader tests should be added to TestSSTableGenerationAndLoading (below),
@@ -21,13 +22,13 @@ class BaseSStableLoaderTest(Tester):
     upgrade_from = None
     compact = False
     jvm_args = None
+    allow_log_errors = True
+    cluster_options = ImmutableMapping({'start_rpc': True})
 
     def __init__(self, *argv, **kwargs):
         if self.jvm_args is None:
             self.jvm_args = []
-        kwargs['cluster_options'] = {'start_rpc': True}
         Tester.__init__(self, *argv, **kwargs)
-        self.allow_log_errors = True
 
     def create_schema(self, session, ks, compression):
         self.create_ks(session, ks, rf=2)

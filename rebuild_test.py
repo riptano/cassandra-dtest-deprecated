@@ -7,23 +7,20 @@ from ccmlib.node import ToolError
 from dtest import Tester, debug
 from tools.data import insert_c1c2, query_c1c2
 from tools.decorators import since
+from tools.misc import ImmutableMapping
 
 
 class TestRebuild(Tester):
-
-    def __init__(self, *args, **kwargs):
-        kwargs['cluster_options'] = {'start_rpc': 'true'}
-        # Ignore these log patterns:
-        self.ignore_log_patterns = [
-            # This one occurs when trying to send the migration to a
-            # node that hasn't started yet, and when it does, it gets
-            # replayed and everything is fine.
-            r'Can\'t send migration request: node.*is down',
-            # ignore streaming error during bootstrap
-            r'Exception encountered during startup',
-            r'Streaming error occurred'
-        ]
-        Tester.__init__(self, *args, **kwargs)
+    cluster_options = ImmutableMapping({'start_rpc': 'true'})
+    ignore_log_patterns = (
+        # This one occurs when trying to send the migration to a
+        # node that hasn't started yet, and when it does, it gets
+        # replayed and everything is fine.
+        r'Can\'t send migration request: node.*is down',
+        # ignore streaming error during bootstrap
+        r'Exception encountered during startup',
+        r'Streaming error occurred'
+    )
 
     def simple_rebuild_test(self):
         """
