@@ -25,15 +25,15 @@ class BaseReplaceAddressTest(Tester):
     __test__ = False
     cluster_options = ImmutableMapping({'start_rpc': 'true'})
     ignore_log_patterns = (
-            # This one occurs when trying to send the migration to a
-            # node that hasn't started yet, and when it does, it gets
-            # replayed and everything is fine.
-            r'Can\'t send migration request: node.*is down',
-            r'Migration task failed to complete',  # 10978
-            # ignore streaming error during bootstrap
-            r'Streaming error occurred',
-            r'failed stream session'
-        )
+        # This one occurs when trying to send the migration to a
+        # node that hasn't started yet, and when it does, it gets
+        # replayed and everything is fine.
+        r'Can\'t send migration request: node.*is down',
+        r'Migration task failed to complete',  # 10978
+        # ignore streaming error during bootstrap
+        r'Streaming error occurred',
+        r'failed stream session'
+    )
 
     def _setup(self, n=3, opts=None, enable_byteman=False, mixed_versions=False):
         debug("Starting cluster with {} nodes.".format(n))

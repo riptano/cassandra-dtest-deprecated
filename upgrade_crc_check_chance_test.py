@@ -8,10 +8,10 @@ from tools.decorators import since
 @since('3.0')
 class TestCrcCheckChanceUpgrade(Tester):
     ignore_log_patterns = (
-            # This one occurs if we do a non-rolling upgrade, the node
-            # it's trying to send the migration to hasn't started yet,
-            # and when it does, it gets replayed and everything is fine.
-            r'Can\'t send migration request: node.*is down',
+        # This one occurs if we do a non-rolling upgrade, the node
+        # it's trying to send the migration to hasn't started yet,
+        # and when it does, it gets replayed and everything is fine.
+        r'Can\'t send migration request: node.*is down',
     )
 
     @skipIf(OFFHEAP_MEMTABLES, 'offheap_objects are not available in 3.0')

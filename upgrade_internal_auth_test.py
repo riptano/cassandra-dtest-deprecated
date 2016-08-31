@@ -15,10 +15,10 @@ class TestAuthUpgrade(Tester):
     cluster_options = ImmutableMapping({'authenticator': 'PasswordAuthenticator',
                                         'authorizer': 'CassandraAuthorizer'})
     ignore_log_patterns = (
-            # This one occurs if we do a non-rolling upgrade, the node
-            # it's trying to send the migration to hasn't started yet,
-            # and when it does, it gets replayed and everything is fine.
-            r'Can\'t send migration request: node.*is down',
+        # This one occurs if we do a non-rolling upgrade, the node
+        # it's trying to send the migration to hasn't started yet,
+        # and when it does, it gets replayed and everything is fine.
+        r'Can\'t send migration request: node.*is down',
     )
 
     @known_failure(failure_source='cassandra',
