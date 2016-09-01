@@ -23,7 +23,7 @@ def silencing_of(log_id, expected_strings=None):
     logger.addFilter(log_filter)
     yield
     if log_filter.records_silenced > 0:
-            print_("Logs were filtered to remove messages deemed unimportant, total count: {}".format(log_filter.records_silenced))
+        print_("Logs were filtered to remove messages deemed unimportant, total count: {}".format(log_filter.records_silenced))
     logger.removeFilter(log_filter)
 
 
@@ -39,26 +39,22 @@ def _make_filter_class(expected_strings):
     class nooplogfilter(object):
         records_silenced = 0
 
-        @staticmethod
-        def filter(record):
+        @classmethod
+        def filter(cls, record):
             return True
 
     class logfilter(object):
         records_silenced = 0
 
         @classmethod
-        def increment_filtered(cls):
-            cls.records_silenced += 1
-
-        @staticmethod
-        def filter(record):
+        def filter(cls, record):
             if expected_strings is None:
-                logfilter.increment_filtered()
+                cls.records_silenced += 1
                 return False
 
             for s in expected_strings:
                 if s in record.msg or s in record.name:
-                    logfilter.increment_filtered()
+                    cls.records_silenced += 1
                     return False
 
             return True
