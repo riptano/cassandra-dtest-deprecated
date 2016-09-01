@@ -270,16 +270,7 @@ class Runner(threading.Thread):
 class Tester(TestCase):
 
     maxDiff = None
-
-    def __init__(self, *argv, **kwargs):
-        # if False, then scan the log of each node for errors after every test.
-        self.allow_log_errors = False
-
-        try:
-            self.cluster_options
-        except AttributeError:
-            self.cluster_options = kwargs.pop('cluster_options', None)
-        super(Tester, self).__init__(*argv, **kwargs)
+    allow_log_errors = False  # scan the log of each node for errors after every test.
 
     def set_node_to_current_version(self, node):
         version = os.environ.get('CASSANDRA_VERSION')
