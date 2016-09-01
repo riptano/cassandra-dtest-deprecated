@@ -291,7 +291,7 @@ class TestRebuild(Tester):
 
     @since('3.10')
     @no_vnodes()
-    def disallow_rebuild_nonlocal_range(self):
+    def disallow_rebuild_nonlocal_range_test(self):
         """
         @jira_ticket CASSANDRA-9875
         Verifies that nodetool rebuild throws an error when an operator
@@ -324,7 +324,7 @@ class TestRebuild(Tester):
 
     @since('3.10')
     @no_vnodes()
-    def disallow_rebuild_from_nonreplica(self):
+    def disallow_rebuild_from_nonreplica_test(self):
         """
         @jira_ticket CASSANDRA-9875
         Verifies that nodetool rebuild throws an error when an operator
@@ -341,50 +341,26 @@ class TestRebuild(Tester):
         cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
         cluster.set_configuration_options(values={'num_tokens': 1})
 
-        node1 = cluster.create_node('node1', False,
-                                    ('127.0.0.1', 9160),
-                                    ('127.0.0.1', 7000),
-                                    '7100', '2000', tokens[0],
-                                    binary_interface=('127.0.0.1', 9042))
-        node1.set_configuration_options(values={'initial_token': tokens[0]})
-        cluster.add(node1, True)
-        node1 = cluster.nodelist()[0]
+        cluster.populate(3)
+        node1, node2, node3 = cluster.nodelist()
 
-        node2 = cluster.create_node('node2', False,
-                                    ('127.0.0.2', 9160),
-                                    ('127.0.0.2', 7000),
-                                    '7200', '2001', tokens[1],
-                                    binary_interface=('127.0.0.2', 9042))
-        node2.set_configuration_options(values={'initial_token': tokens[1]})
-        cluster.add(node2, True)
-        node2 = cluster.nodelist()[1]
-
-        node3 = cluster.create_node('node3', False,
-                                    ('127.0.0.3', 9160),
-                                    ('127.0.0.3', 7000),
-                                    '7300', '2002', tokens[2],
-                                    binary_interface=('127.0.0.3', 9042))
-        node3.set_configuration_options(values={'initial_token': tokens[2]})
-        cluster.add(node3, True)
-        node3 = cluster.nodelist()[2]
-
-        node1.start(wait_for_binary_proto=True)
-        node2.start(wait_for_binary_proto=True)
-        node3.start(wait_for_binary_proto=True)
+        node1_token, node2_token, node3_token = tokens[:3]
+        node1.set_configuration_options(values={'initial_token': node1_token})
+        node2.set_configuration_options(values={'initial_token': node2_token})
+        node3.set_configuration_options(values={'initial_token': node3_token})
+        cluster.start(wait_for_binary_proto=True)
 
         node3_address = node3.network_interfaces['binary'][0]
 
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with self.assertRaises(ToolError) as cm:
-            node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (tokens[2], tokens[0], node3_address))
-
-        self.assertRegexpMatches(cm.exception.stdout, 'Unable to find sufficient sources for streaming range')
+        with self.assertRaisesRegexp(ToolError, 'Unable to find sufficient sources for streaming range'):
+            node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
 
     @since('3.10')
     @no_vnodes()
-    def rebuild_with_specific_sources(self):
+    def rebuild_with_specific_sources_test(self):
         """
         @jira_ticket CASSANDRA-9875
         Verifies that an operator can specify specific sources to use
@@ -404,26 +380,11 @@ class TestRebuild(Tester):
         tokens = cluster.balanced_tokens_across_dcs(['dc1', 'dc2', 'dc3'])
         cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
         cluster.set_configuration_options(values={'num_tokens': 1})
-        node1 = cluster.create_node('node1', False,
-                                    ('127.0.0.1', 9160),
-                                    ('127.0.0.1', 7000),
-                                    '7100', '2000', tokens[0],
-                                    binary_interface=('127.0.0.1', 9042))
-        node1.set_configuration_options(values={'initial_token': tokens[0]})
-        cluster.add(node1, True, data_center='dc1')
-        node1 = cluster.nodelist()[0]
-        node2 = cluster.create_node('node2', False,
-                                    ('127.0.0.2', 9160),
-                                    ('127.0.0.2', 7000),
-                                    '7200', '2001', tokens[1],
-                                    binary_interface=('127.0.0.2', 9042))
-        node2.set_configuration_options(values={'initial_token': tokens[1]})
-        cluster.add(node2, True, data_center='dc2')
-        node2 = cluster.nodelist()[1]
 
-        # start nodes in dc1, dc2
-        node1.start(wait_for_binary_proto=True)
-        node2.start(wait_for_binary_proto=True)
+        cluster.populate([1, 1], tokens=tokens[:2])
+        node1, node2 = cluster.nodelist()
+
+        cluster.start(wait_for_binary_proto=True)
 
         # populate data in dc1, dc2
         session = self.patient_exclusive_cql_connection(node1)
@@ -437,13 +398,12 @@ class TestRebuild(Tester):
         insert_c1c2(session, n=keys, consistency=ConsistencyLevel.ALL)
         session.shutdown()
 
-        # Bootstraping a new node in dc3 with auto_bootstrap: false
+        # bootstrap a new node in dc3 with auto_bootstrap: false
         node3 = cluster.create_node('node3', False,
                                     ('127.0.0.3', 9160),
                                     ('127.0.0.3', 7000),
                                     '7300', '2002', tokens[2],
                                     binary_interface=('127.0.0.3', 9042))
-        node3.set_configuration_options(values={'initial_token': tokens[2]})
         cluster.add(node3, False, data_center='dc3')
         node3.start(wait_other_notice=True, wait_for_binary_proto=True)
 
