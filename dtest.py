@@ -41,7 +41,7 @@ from plugins.dtestconfig import _CONFIG as CONFIG
 # We don't want test files to know about the plugins module, so we import
 # constants here and re-export them.
 from plugins.dtestconfig import GlobalConfigObject
-from tools.context import silencing_of
+from tools.context import log_filter
 from tools.funcutils import merge_dicts
 
 LOG_SAVED_DIR = "logs"
@@ -515,7 +515,7 @@ class Tester(TestCase):
         if is_win():
             timeout *= 2
 
-        with silencing_of(
+        with log_filter(
             'cassandra.cluster',
             ['Control connection failed to connect, shutting down Cluster:',
              '[control connection] Error connecting to ']
@@ -836,7 +836,7 @@ def create_ccm_cluster(test_path, name):
 
 
 def cleanup_cluster(cluster, test_path, log_watch_thread=None):
-    with silencing_of('cassandra'):  # quiet noise from driver when nodes start going down
+    with log_filter('cassandra'):  # quiet noise from driver when nodes start going down
         if KEEP_TEST_DIR:
             cluster.stop(gently=RECORD_COVERAGE)
         else:

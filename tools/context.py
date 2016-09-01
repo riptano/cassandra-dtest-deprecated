@@ -3,14 +3,15 @@ Home for functionality that provides context managers, and anything related to
 making those context managers function.
 """
 import logging
-import os
 from contextlib import contextmanager
 
 from six import print_
 
+from tools.env import ALLOW_NOISY_LOGGING
+
 
 @contextmanager
-def silencing_of(log_id, expected_strings=None):
+def log_filter(log_id, expected_strings=None):
     """
     Context manager which allows silencing logs until exit.
     Log records matching expected_strings will be filtered out of logging.
