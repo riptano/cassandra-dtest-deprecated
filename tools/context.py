@@ -33,9 +33,9 @@ class silencing_of(object):
 
     def _get_filter_obj(self, expected_strings):
         """
-        Builds an anon-ish filtering class and returns an instance of it.
+        Builds an anon-ish filtering class and returns it.
 
-        Returns a logfilter object if filtering should take place, otherwise a nooplogfilter object.
+        Returns a logfilter if filtering should take place, otherwise a nooplogfilter.
 
         We're just using a class here as a one-off object with a filter method, for
         use as a filter object on the desired log.
@@ -68,6 +68,6 @@ class silencing_of(object):
                 return True
 
         if ALLOW_NOISY_LOGGING:
-            return nooplogfilter()
+            return nooplogfilter
         else:
-            return logfilter()
+            return logfilter
