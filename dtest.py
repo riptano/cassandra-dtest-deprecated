@@ -271,6 +271,7 @@ class Tester(TestCase):
 
     maxDiff = None
     allow_log_errors = False  # scan the log of each node for errors after every test.
+    cluster_options = None
 
     def set_node_to_current_version(self, node):
         version = os.environ.get('CASSANDRA_VERSION')
