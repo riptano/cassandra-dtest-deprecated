@@ -8,8 +8,6 @@ from contextlib import contextmanager
 
 from six import print_
 
-ALLOW_NOISY_LOGGING = os.environ.get('ALLOW_NOISY_LOGGING', '').lower() in ('yes', 'true')
-
 
 @contextmanager
 def silencing_of(log_id, expected_strings=None):
