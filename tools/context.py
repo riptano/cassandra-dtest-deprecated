@@ -3,8 +3,11 @@ Home for functionality that provides context managers, and anything related to
 making those context managers function.
 """
 import logging
+import os
 
 from six import print_
+
+ALLOW_NOISY_LOGGING = os.environ.get('ALLOW_NOISY_LOGGING', '').lower() in ('yes', 'true')
 
 
 class silencing_of(object):
@@ -31,12 +34,20 @@ class silencing_of(object):
     def _get_filter_obj(self, expected_strings):
         """
         Builds an anon-ish filtering class and returns an instance of it.
+
+        Returns a logfilter object if filtering should take place, otherwise a nooplogfilter object.
+
+        We're just using a class here as a one-off object with a filter method, for
+        use as a filter object on the desired log.
         """
+        class nooplogfilter(object):
+            records_silenced = 0
+
+            @staticmethod
+            def filter(record):
+                return True
+
         class logfilter(object):
-            """
-            We're just using a class here as a one-off object with a filter method, for
-            use as a filter object on the desired log.
-            """
             records_silenced = 0
 
             @classmethod
@@ -56,4 +67,7 @@ class silencing_of(object):
 
                 return True
 
-        return logfilter()
+        if ALLOW_NOISY_LOGGING:
+            return nooplogfilter()
+        else:
+            return logfilter()
