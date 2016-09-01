@@ -515,11 +515,8 @@ class Tester(TestCase):
         if is_win():
             timeout *= 2
 
-        with log_filter(
-            'cassandra.cluster',
-            ['Control connection failed to connect, shutting down Cluster:',
-             '[control connection] Error connecting to ']
-        ):
+        expected_log_lines = ('Control connection failed to connect, shutting down Cluster:', '[control connection] Error connecting to ')
+        with log_filter('cassandra.cluster', expected_log_lines):
             session = retry_till_success(
                 self.cql_connection,
                 node,
