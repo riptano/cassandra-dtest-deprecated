@@ -140,9 +140,9 @@ class TestRebuild(Tester):
 
         Test rebuild operation is resumable
         """
-        self.ignore_log_patterns = self.ignore_log_patterns[:] + [r'Error while rebuilding node',
-                                                                  r'Streaming error occurred on session with peer 127.0.0.3',
-                                                                  r'Remote peer 127.0.0.3 failed stream session']
+        self.ignore_log_patterns = list(self.ignore_log_patterns)[:] + [r'Error while rebuilding node',
+                                                                        r'Streaming error occurred on session with peer 127.0.0.3',
+                                                                        r'Remote peer 127.0.0.3 failed stream session']
         cluster = self.cluster
         cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
 
