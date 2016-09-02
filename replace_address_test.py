@@ -23,6 +23,7 @@ class NodeUnavailable(Exception):
 
 class BaseReplaceAddressTest(Tester):
     __test__ = False
+    replacement_node = None
     cluster_options = ImmutableMapping({'start_rpc': 'true'})
     ignore_log_patterns = (
         # This one occurs when trying to send the migration to a
