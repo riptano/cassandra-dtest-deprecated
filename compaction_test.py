@@ -87,6 +87,7 @@ class TestCompaction(Tester):
             debug(output)
 
         node1.flush()
+        node1.compact()
         node1.wait_for_compactions()
 
         output = node1.nodetool('cfstats').stdout
@@ -174,7 +175,9 @@ class TestCompaction(Tester):
             session.execute('delete from cf where key = ' + str(x))
 
         node1.flush()
+        node1.compact()
         node1.wait_for_compactions()
+        time.sleep(1)
         try:
             for data_dir in node1.data_directories():
                 cfs = os.listdir(os.path.join(data_dir, "ks"))
