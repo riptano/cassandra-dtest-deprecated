@@ -7,7 +7,7 @@ import struct
 import time
 from collections import OrderedDict
 from distutils.version import LooseVersion
-from unittest import skipUnless
+from unittest import skip, skipUnless
 from uuid import UUID, uuid4
 
 from cassandra import ConsistencyLevel, InvalidRequest
@@ -29,7 +29,7 @@ from thrift_tests import get_thrift_client
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_none, assert_one, assert_row_count)
 from tools.data import rows_to_list
-from tools.decorators import known_failure, require, since
+from tools.decorators import known_failure, since
 from upgrade_base import UpgradeTester
 from upgrade_manifest import build_upgrade_pairs
 
@@ -4984,7 +4984,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT writetime(v) FROM TEST WHERE k = 1", [-42])
 
     @since('2.2')
-    @require("7396")
+    @skip('awaiting CASSANDRA-7396')
     def select_map_key_single_row_test(self):
         cursor = self.prepare()
 
@@ -5012,7 +5012,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT sizeof(v) FROM test where k = 0", [4])
 
     @since('2.2')
-    @require("7396")
+    @skip('awaiting CASSANDRA-7396')
     def select_set_key_single_row_test(self):
         cursor = self.prepare()
 
@@ -5043,7 +5043,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT sizeof(v) FROM test where k = 0", [4])
 
     @since('2.2')
-    @require("7396")
+    @skip('awaiting CASSANDRA-7396')
     def select_list_key_single_row_test(self):
         cursor = self.prepare()
 
@@ -5071,7 +5071,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT sizeof(v) FROM test where k = 0", [4])
 
     @since('2.2')
-    @require("7396")
+    @skip('awaiting CASSANDRA-7396')
     def select_map_key_multi_row_test(self):
         cursor = self.prepare()
 
@@ -5100,7 +5100,7 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT sizeof(v) FROM test", [[4], [4]])
 
     @since('2.2')
-    @require("7396")
+    @skip('awaiting CASSANDRA-7396')
     def select_set_key_multi_row_test(self):
         cursor = self.prepare()
 
@@ -5131,7 +5131,7 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT sizeof(v) FROM test", [[4], [4]])
 
     @since('2.2')
-    @require("7396")
+    @skip('awaiting CASSANDRA-7396')
     def select_list_key_multi_row_test(self):
         cursor = self.prepare()
 
