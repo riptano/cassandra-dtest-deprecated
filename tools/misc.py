@@ -83,8 +83,7 @@ class ImmutableMapping(Mapping):
         return self._data[key]
 
     def __iter__(self):
-        for k in self._data.keys():
-            yield k
+        return iter(self._data)
 
     def __len__(self):
         return len(self._data)
