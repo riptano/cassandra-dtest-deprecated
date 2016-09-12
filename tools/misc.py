@@ -88,3 +88,6 @@ class ImmutableMapping(Mapping):
 
     def __len__(self):
         return len(self._data)
+
+    def __repr__(self):
+        return '{cls}({data})'.format(cls=self.__class__.__name__, data=self._data)
