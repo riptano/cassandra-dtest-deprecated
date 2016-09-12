@@ -21,14 +21,9 @@ class BaseSStableLoaderTest(Tester):
     __test__ = False
     upgrade_from = None
     compact = False
-    jvm_args = None
+    jvm_args = ()
     allow_log_errors = True
     cluster_options = ImmutableMapping({'start_rpc': True})
-
-    def __init__(self, *argv, **kwargs):
-        if self.jvm_args is None:
-            self.jvm_args = []
-        Tester.__init__(self, *argv, **kwargs)
 
     def create_schema(self, session, ks, compression):
         self.create_ks(session, ks, rf=2)
@@ -131,8 +126,8 @@ class BaseSStableLoaderTest(Tester):
             default_install_dir = self.cluster.get_install_dir()
             # Forcing cluster version on purpose
             cluster.set_install_dir(version=self.upgrade_from)
-        debug("Using jvm_args=%s" % self.jvm_args)
-        cluster.populate(2).start(jvm_args=self.jvm_args)
+        debug("Using jvm_args={}".format(self.jvm_args))
+        cluster.populate(2).start(jvm_args=list(self.jvm_args))
         node1, node2 = cluster.nodelist()
         time.sleep(.5)
 
@@ -169,7 +164,7 @@ class BaseSStableLoaderTest(Tester):
             # Return to previous version
             cluster.set_install_dir(install_dir=default_install_dir)
 
-        cluster.start(jvm_args=self.jvm_args)
+        cluster.start(jvm_args=list(self.jvm_args))
         time.sleep(5)  # let gossip figure out what is going on
 
         debug("re-creating the keyspace and column families.")
