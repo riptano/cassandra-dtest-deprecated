@@ -175,7 +175,7 @@ class TestCompaction(Tester):
             session.execute('delete from cf where key = ' + str(x))
 
         node1.flush()
-        node1.compact()
+        node1.nodetool("compact ks cf")
         node1.wait_for_compactions()
         time.sleep(1)
         try:
