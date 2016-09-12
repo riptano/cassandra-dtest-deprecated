@@ -14,7 +14,7 @@ class TestReadFailures(Tester):
     @jira_ticket CASSANDRA-12311.
     """
     ignore_log_patterns = (
-        "Scanned over [1-9][0-9]* tombstones"  # This is expected when testing read failures due to tombstones
+        "Scanned over [1-9][0-9]* tombstones",  # This is expected when testing read failures due to tombstones
     )
 
     def setUp(self):
