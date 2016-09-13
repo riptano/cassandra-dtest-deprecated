@@ -19,7 +19,6 @@ COMPARATORS = ['BytesType', 'AsciiType', 'UTF8Type', 'IntegerType', 'LongType', 
                'TimestampType']
 
 
-@since('2.0')
 class TestSCUpgrade(Tester):
     """
     Tests upgrade between 1.2->2.0 for super columns (since that's where we
@@ -47,7 +46,7 @@ class TestSCUpgrade(Tester):
         cluster = self.cluster
 
         # Forcing cluster version on purpose
-        cluster.set_install_dir(version="1.2.16")
+        cluster.set_install_dir(version="1.2.19")
         if "memtable_allocation_type" in cluster._config_options:
             cluster._config_options.__delitem__("memtable_allocation_type")
         cluster.populate(num_nodes).start()
@@ -126,7 +125,7 @@ class TestSCUpgrade(Tester):
         self.verify_with_thrift()
         self.verify_with_cql()
 
-        versions = ['git:2.1', 'git:2.2', 'git:3.0', 'git:3.9', 'git:trunk']
+        versions = ['git:cassandra-2.1', 'git:cassandra-2.2', 'git:cassandra-3.0', 'git:cassandra-3.9', 'git:cassandra-trunk']
 
         for version in versions:
             session.cluster.shutdown()
