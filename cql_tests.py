@@ -285,7 +285,7 @@ class StorageProxyCQLTester(CQLTester):
 
         assert_one(session, "SELECT COUNT(*) FROM test7 WHERE kind = 'ev1'", [0])
 
-    @since('3.8')
+    @since('3.10')
     def partition_key_allow_filtering_test(self):
         """
         Filtering with unrestricted parts of partition keys

@@ -2119,7 +2119,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                                                                                                        [3, 6, 4, 7],
                                                                                                                        [3, 5, 4, 6]])
 
-    @since('3.8')
+    @since('3.10')
     def test_paging_with_filtering_on_partition_key(self):
         """
         test allow filtering on partition key
@@ -2216,7 +2216,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             # Single partition query with ORDER BY and LIMIT
             assert_invalid(session, "SELECT * FROM test WHERE a <= 0 AND c >= 1 ORDER BY b DESC LIMIT 2 ALLOW FILTERING", expected=InvalidRequest)
 
-    @since('3.8')
+    @since('3.10')
     def test_paging_with_filtering_on_partition_key_with_limit(self):
         """
         test allow filtering on partition key
@@ -2286,7 +2286,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [3, 3, 4, 5],
                                               [4, 3, 4, 5]])
 
-    @since('3.8')
+    @since('3.10')
     def test_paging_with_filtering_on_partition_key_on_counter_columns(self):
         """
         test paging, when filtering on partition key on counter columns
@@ -2384,7 +2384,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [1, 4, 5, 6],
                                               [4, 4, 5, 6]])
 
-    @since('3.8')
+    @since('3.10')
     def test_paging_with_filtering_on_partition_key_on_clustering_columns(self):
         """
         test paging, when filtering on partition key clustering columns
@@ -2395,7 +2395,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         self._test_paging_with_filtering_on_partition_key_on_clustering_columns(session, False)
         self._test_paging_with_filtering_on_partition_key_on_clustering_columns(session, True)
 
-    @since('3.8')
+    @since('3.10')
     def test_paging_with_filtering_on_partition_key_on_clustering_columns_with_contains(self):
         """
         test paging, when filtering on partition key and clustering columns (frozen collections) with CONTAINS statement
@@ -2477,7 +2477,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [3, 0, {1: 2}, 3],
                                               [4, 0, {1: 2}, 3]])
 
-    @since('3.8')
+    @since('3.10')
     def test_paging_with_filtering_on_partition_key_on_static_columns(self):
         """
         test paging, when filtering on partition key, on static columns
