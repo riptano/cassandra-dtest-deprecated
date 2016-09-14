@@ -2196,6 +2196,12 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [4, 2, 4, 2, 6],
                                               [4, 3, 4, 3, 7]])
 
+            res = rows_to_list(session.execute("SELECT * FROM test WHERE a >= 3 AND c >= 1 AND s > 1 PER PARTITION LIMIT 2 ALLOW FILTERING"))
+            self.assertEqualIgnoreOrder(res, [[3, 1, 3, 1, 4],
+                                              [3, 2, 3, 2, 5],
+                                              [4, 1, 4, 1, 5],
+                                              [4, 2, 4, 2, 6]])
+
             # Single partition queries with LIMIT
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a < 1 AND c >= 1 LIMIT 2 ALLOW FILTERING"))
             self.assertEqual(res, [[0, 1, 0, 1, 1],
