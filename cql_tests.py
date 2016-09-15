@@ -1119,13 +1119,13 @@ class LWTTester(CQLTester):
             CREATE TABLE lwt_with_static (a int, b int, s int static, d text, PRIMARY KEY (a, b))
         """)
 
-        assert_one(session, "UPDATE lwt_with_static SET s = 1 WHERE a = 1 IF s = NULL", [True])
+        assert_one(session, "UPDATE lwt_with_static SET s = 1 WHERE a = 1 IF s = NULL", [False])
 
-        assert_one(session, "SELECT * FROM lwt_with_static", [1, None, 1, None])
+        assert_none(session, "SELECT * FROM lwt_with_static")
 
         assert_one(session, "UPDATE lwt_with_static SET s = 2 WHERE a = 2 IF EXISTS", [False])
 
-        assert_one(session, "SELECT * FROM lwt_with_static WHERE a = 1", [1, None, 1, None])
+        assert_none(session, "SELECT * FROM lwt_with_static WHERE a = 1")
 
         assert_one(session, "INSERT INTO lwt_with_static (a, s) VALUES (2, 2) IF NOT EXISTS", [True])
 
@@ -1134,30 +1134,17 @@ class LWTTester(CQLTester):
         assert_one(session, "BEGIN BATCH\n" +
                    "INSERT INTO lwt_with_static (a, b, d) values (3, 3, 'a');\n" +
                    "UPDATE lwt_with_static SET s = 3 WHERE a = 3 IF s = null;\n" +
-                   "APPLY BATCH;", [True])
+                   "APPLY BATCH;", [False])
 
-        assert_one(session, "SELECT * FROM lwt_with_static WHERE a = 3", [3, 3, 3, "a"])
+        assert_none(session, "SELECT * FROM lwt_with_static WHERE a = 3")
 
         # LWT applies before INSERT
         assert_one(session, "BEGIN BATCH\n" +
                    "INSERT INTO lwt_with_static (a, b, d) values (4, 4, 'a');\n" +
                    "UPDATE lwt_with_static SET s = 4 WHERE a = 4 IF s = null;\n" +
-                   "APPLY BATCH;", [True])
+                   "APPLY BATCH;", [False])
 
-        assert_one(session, "SELECT * FROM lwt_with_static WHERE a = 4", [4, 4, 4, "a"])
-
-    def _validate_non_existing_or_null_values(self, table_name, session):
-        assert_one(session, "UPDATE {} SET s = 1 WHERE a = 1 IF s = NULL".format(table_name), [True])
-
-        assert_one(session, "SELECT a, s, d FROM {} WHERE a = 1".format(table_name), [1, 1, None])
-
-        assert_one(session, "UPDATE {} SET s = 2 WHERE a = 2 IF s IN (10,20,NULL)".format(table_name), [True])
-
-        assert_one(session, "SELECT a, s, d FROM {} WHERE a = 2".format(table_name), [2, 2, None])
-
-        assert_one(session, "UPDATE {} SET s = 4 WHERE a = 4 IF s != 4".format(table_name), [True])
-
-        assert_one(session, "SELECT a, s, d FROM {} WHERE a = 4".format(table_name), [4, 4, None])
+        assert_none(session, "SELECT * FROM lwt_with_static WHERE a = 4")
 
     @since('2.1')
     def conditional_updates_on_static_columns_with_null_values_test(self):
@@ -1171,14 +1158,24 @@ class LWTTester(CQLTester):
         for i in range(1, 6):
             session.execute("INSERT INTO {} (a, b) VALUES ({}, {})".format(table_name, i, i))
 
-        self._validate_non_existing_or_null_values(table_name, session)
+        assert_one(session, "UPDATE {} SET s = 1 WHERE a = 1 IF s = NULL".format(table_name), [True])
 
-        assert_one(session, "UPDATE {} SET s = 30 WHERE a = 3 IF s IN (10,20,30)".format(table_name), [False])
+        assert_one(session, "SELECT a, s, d FROM {} WHERE a = 1".format(table_name), [1, 1, None])
+
+        assert_one(session, "UPDATE {} SET s = 2 WHERE a = 2 IF s IN (10,20,NULL)".format(table_name), [True])
+
+        assert_one(session, "SELECT a, s, d FROM {} WHERE a = 2".format(table_name), [2, 2, None])
+
+        assert_one(session, "UPDATE {} SET s = 4 WHERE a = 4 IF s != 4".format(table_name), [True])
+
+        assert_one(session, "SELECT a, s, d FROM {} WHERE a = 4".format(table_name), [4, 4, None])
+
+        assert_one(session, "UPDATE {} SET s = 30 WHERE a = 3 IF s IN (10,20,30)".format(table_name), [False, None])
 
         assert_one(session, "SELECT * FROM {} WHERE a = 3".format(table_name), [3, 3, None, None])
 
         for operator in [">", "<", ">=", "<=", "="]:
-            assert_one(session, "UPDATE {} SET s = 50 WHERE a = 5 IF s {} 3".format(table_name, operator), [False])
+            assert_one(session, "UPDATE {} SET s = 50 WHERE a = 5 IF s {} 3".format(table_name, operator), [False, None])
 
             assert_one(session, "SELECT * FROM {} WHERE a = 5".format(table_name), [5, 5, None, None])
 
@@ -1191,7 +1188,17 @@ class LWTTester(CQLTester):
             CREATE TABLE {} (a int, b int, s int static, d text, PRIMARY KEY (a, b))
         """.format(table_name))
 
-        self._validate_non_existing_or_null_values(table_name, session)
+        assert_one(session, "UPDATE {} SET s = 1 WHERE a = 1 IF s = NULL".format(table_name), [False])
+
+        assert_none(session, "SELECT a, s, d FROM {} WHERE a = 1".format(table_name))
+
+        assert_one(session, "UPDATE {} SET s = 2 WHERE a = 2 IF s IN (10,20,NULL)".format(table_name), [False])
+
+        assert_none(session, "SELECT a, s, d FROM {} WHERE a = 2".format(table_name))
+
+        assert_one(session, "UPDATE {} SET s = 4 WHERE a = 4 IF s != 4".format(table_name), [False])
+
+        assert_none(session, "SELECT a, s, d FROM {} WHERE a = 4".format(table_name))
 
         assert_one(session, "UPDATE {} SET s = 30 WHERE a = 3 IF s IN (10,20,30)".format(table_name), [False])
 
@@ -1202,7 +1209,18 @@ class LWTTester(CQLTester):
 
             assert_none(session, "SELECT * FROM {} WHERE a = 5".format(table_name))
 
-    def _validate_non_existing_or_null_values_batch(self, table_name, session):
+    @since('2.1')
+    def conditional_updates_on_static_columns_with_null_values_batch_test(self):
+        session = self.prepare(3)
+
+        table_name = "lwt_on_static_columns_with_null_batch"
+        session.execute("""
+            CREATE TABLE {table_name} (a int, b int, s int static, d text, PRIMARY KEY (a, b))
+        """.format(table_name=table_name))
+
+        for i in range(1, 8):
+            session.execute("INSERT INTO {table_name} (a, b) VALUES ({i}, {i})".format(table_name=table_name, i=i))
+
         assert_one(session, """
             BEGIN BATCH
                 INSERT INTO {table_name} (a, b, d) values (2, 2, 'a');
@@ -1235,26 +1253,12 @@ class LWTTester(CQLTester):
 
         assert_one(session, "SELECT * FROM {table_name} WHERE a = 7".format(table_name=table_name), [7, 7, 8, "a"])
 
-    @since('2.1')
-    def conditional_updates_on_static_columns_with_null_values_batch_test(self):
-        session = self.prepare(3)
-
-        table_name = "lwt_on_static_columns_with_null_batch"
-        session.execute("""
-            CREATE TABLE {table_name} (a int, b int, s int static, d text, PRIMARY KEY (a, b))
-        """.format(table_name=table_name))
-
-        for i in range(1, 7):
-            session.execute("INSERT INTO {table_name} (a, b) VALUES ({i}, {i})".format(table_name=table_name, i=i))
-
-        self._validate_non_existing_or_null_values_batch(table_name, session)
-
         for operator in [">", "<", ">=", "<=", "="]:
             assert_one(session, """
                 BEGIN BATCH
                     INSERT INTO {table_name} (a, b, s, d) values (3, 3, 40, 'a')
                     UPDATE {table_name} SET s = 30 WHERE a = 3 IF s {operator} 5;
-                APPLY BATCH""".format(table_name=table_name, operator=operator), [False])
+                APPLY BATCH""".format(table_name=table_name, operator=operator), [False, 3, 3, None])
 
             assert_one(session, "SELECT * FROM {table_name} WHERE a = 3".format(table_name=table_name), [3, 3, None, None])
 
@@ -1262,11 +1266,12 @@ class LWTTester(CQLTester):
                 BEGIN BATCH
                     INSERT INTO {table_name} (a, b, s, d) values (6, 6, 70, 'a')
                     UPDATE {table_name} SET s = 60 WHERE a = 6 IF s IN (1,2,3)
-                APPLY BATCH""".format(table_name=table_name), [False])
+                APPLY BATCH""".format(table_name=table_name), [False, 6, 6, None])
 
         assert_one(session, "SELECT * FROM {table_name} WHERE a = 6".format(table_name=table_name), [6, 6, None, None])
 
-    def _conditional_deletes_on_static_columns_with_null_values_test(self, is_2_x):
+    @since('2.1')
+    def conditional_deletes_on_static_columns_with_null_values_test(self):
         """
         2.x and 3.x are returning failed LWTs in slightly different format.
         """
@@ -1284,10 +1289,7 @@ class LWTTester(CQLTester):
 
         assert_one(session, "SELECT * FROM {} WHERE a = 1".format(table_name), [1, 1, None, None, 1])
 
-        if is_2_x:
-            assert_one(session, "DELETE s1 FROM {} WHERE a = 2 IF s2 IN (10,20,30)".format(table_name), [False, None])
-        else:
-            assert_one(session, "DELETE s1 FROM {} WHERE a = 2 IF s2 IN (10,20,30)".format(table_name), [False])
+        assert_one(session, "DELETE s1 FROM {} WHERE a = 2 IF s2 IN (10,20,30)".format(table_name), [False, None])
 
         assert_one(session, "SELECT * FROM {} WHERE a = 2".format(table_name), [2, 2, 2, None, 2])
 
@@ -1300,20 +1302,8 @@ class LWTTester(CQLTester):
         assert_one(session, "SELECT * FROM {} WHERE a = 4".format(table_name), [4, 4, None, None, 4])
 
         for operator in [">", "<", ">=", "<=", "="]:
-            if is_2_x:
-                assert_one(session, "DELETE s1 FROM {} WHERE a = 5 IF s2 {} 3".format(table_name, operator), [False, None])
-            else:
-                assert_one(session, "DELETE s1 FROM {} WHERE a = 5 IF s2 {} 3".format(table_name, operator), [False])
-
+            assert_one(session, "DELETE s1 FROM {} WHERE a = 5 IF s2 {} 3".format(table_name, operator), [False, None])
             assert_one(session, "SELECT * FROM {} WHERE a = 5".format(table_name), [5, 5, 5, None, 5])
-
-    @since('2.1', max_version='3.0')
-    def conditional_deletes_on_static_columns_with_null_values_test(self):
-        self._conditional_deletes_on_static_columns_with_null_values_test(True)
-
-    @since('3.0')
-    def conditional_deletes_on_static_columns_with_null_values_test(self):
-        self._conditional_deletes_on_static_columns_with_null_values_test(False)
 
     @since('2.1')
     def conditional_deletes_on_static_columns_with_null_values_batch_test(self):
@@ -1328,9 +1318,9 @@ class LWTTester(CQLTester):
              BEGIN BATCH
                  INSERT INTO {table_name} (a, b, s1, v) values (2, 2, 2, 2);
                  DELETE s1 FROM {table_name} WHERE a = 2 IF s2 = null;
-             APPLY BATCH""".format(table_name=table_name), [True])
+             APPLY BATCH""".format(table_name=table_name), [False])
 
-        assert_one(session, "SELECT * FROM {} WHERE a = 2".format(table_name), [2, 2, None, None, 2])
+        assert_none(session, "SELECT * FROM {} WHERE a = 2".format(table_name))
 
         for operator in [">", "<", ">=", "<=", "="]:
             assert_one(session, """
@@ -1353,22 +1343,22 @@ class LWTTester(CQLTester):
              BEGIN BATCH
                  INSERT INTO {table_name} (a, b, s1, v) values (4, 4, 4, 4);
                  DELETE s1 FROM {table_name} WHERE a = 4 IF s2 = null;
-             APPLY BATCH""".format(table_name=table_name), [True])
+             APPLY BATCH""".format(table_name=table_name), [False])
 
-        assert_one(session, "SELECT * FROM {} WHERE a = 4".format(table_name), [4, 4, None, None, 4])
+        assert_none(session, "SELECT * FROM {} WHERE a = 4".format(table_name))
 
         assert_one(session, """
             BEGIN BATCH
                 INSERT INTO {table_name} (a, b, s1, v) VALUES (5, 5, 5, 5);
                 DELETE s1 FROM {table_name} WHERE a = 5 IF s1 IN (1,2,null);
-            APPLY BATCH""".format(table_name=table_name), [True])
+            APPLY BATCH""".format(table_name=table_name), [False])
 
-        assert_one(session, "SELECT * FROM {} WHERE a = 5".format(table_name), [5, 5, None, None, 5])
+        assert_none(session, "SELECT * FROM {} WHERE a = 5".format(table_name))
 
         assert_one(session, """
             BEGIN BATCH
                 INSERT INTO {table_name} (a, b, s1, v) values (7, 7, 7, 7);
                 DELETE s1 FROM {table_name} WHERE a = 7 IF s2 != 7;
-            APPLY BATCH""".format(table_name=table_name), [True])
+            APPLY BATCH""".format(table_name=table_name), [False])
 
-        assert_one(session, "SELECT * FROM {} WHERE a = 7".format(table_name), [7, 7, None, None, 7])
+        assert_none(session, "SELECT * FROM {} WHERE a = 7".format(table_name))
