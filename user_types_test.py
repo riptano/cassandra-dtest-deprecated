@@ -5,6 +5,7 @@ from cassandra import ConsistencyLevel, Unauthorized
 from cassandra.query import SimpleStatement
 
 from dtest import Tester
+from distutils.version import LooseVersion
 from tools.assertions import assert_invalid
 from tools.decorators import since
 
@@ -374,7 +375,7 @@ class TestUserTypes(Tester):
               SELECT id, name.first from person_likes where id={id};
            """.format(id=_id)
 
-        if self.cluster.version() >= '3.10':
+        if LooseVersion(self.cluster.version()) >= LooseVersion('3.10'):
             assert_invalid(session, stmt, 'Cannot execute this query as it might involve data filtering')
         elif self.cluster.version() >= '2.2':
             assert_invalid(session, stmt, 'Partition key parts: name must be restricted as other parts are')
