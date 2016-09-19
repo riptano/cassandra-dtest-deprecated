@@ -1017,6 +1017,7 @@ class TestUpgradeSecondaryIndexes(Tester):
             # node.nodetool('upgradesstables -a')
 
 
+@since('3.0.9')
 class TestPreJoinCallback(Tester):
 
     def __init__(self, *args, **kwargs):
@@ -1055,7 +1056,6 @@ class TestPreJoinCallback(Tester):
         # Run the join function to test
         joinFn(cluster, tokens[1])
 
-    @since('3.0')
     def bootstrap_test(self):
         def bootstrap(cluster, token):
             node2 = new_node(cluster)
@@ -1065,7 +1065,6 @@ class TestPreJoinCallback(Tester):
 
         self._base_test(bootstrap)
 
-    @since('3.0')
     def resume_test(self):
         def resume(cluster, token):
             node1 = cluster.nodes['node1']
@@ -1087,7 +1086,6 @@ class TestPreJoinCallback(Tester):
 
         self._base_test(resume)
 
-    @since('3.0')
     def manual_join_test(self):
         def manual_join(cluster, token):
             node2 = new_node(cluster)
@@ -1101,7 +1099,6 @@ class TestPreJoinCallback(Tester):
 
         self._base_test(manual_join)
 
-    @since('3.0')
     def write_survey_test(self):
         def write_survey_and_join(cluster, token):
             node2 = new_node(cluster)
