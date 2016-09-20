@@ -470,8 +470,8 @@ class TestCDC(Tester):
         debug('creating new table')
         loading_session.execute(create_stmt)
         debug('stopping new node')
-        loading_node.stop()
         loading_session.cluster.shutdown()
+        loading_node.stop()
         return loading_node
 
     @known_failure(failure_source='test',
@@ -512,8 +512,8 @@ class TestCDC(Tester):
         generation_node.drain()
         debug('stopping')
         # stop the node and clean up all sessions attached to it
-        generation_node.stop()
         generation_session.cluster.shutdown()
+        generation_node.stop()
 
         # We can rely on the existing _cdc.idx files to determine which .log files contain cdc data.
         source_path = os.path.join(generation_node.get_path(), 'cdc_raw')
