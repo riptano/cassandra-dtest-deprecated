@@ -12,7 +12,7 @@ from cassandra.protocol import ConfigurationException
 from cassandra.query import BatchStatement, SimpleStatement
 
 from dtest import (DISABLE_VNODES, OFFHEAP_MEMTABLES, DtestTimeoutError,
-                   Tester, debug)
+                   Tester, debug, CASSANDRA_VERSION_FROM_BUILD)
 from tools.assertions import assert_bootstrap_state, assert_invalid, assert_one, assert_row_count
 from tools.data import index_is_built, rows_to_list
 from tools.decorators import known_failure, since
@@ -1017,7 +1017,8 @@ class TestUpgradeSecondaryIndexes(Tester):
             # node.nodetool('upgradesstables -a')
 
 
-@since('3.0.9')
+@skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+@since('3.10')
 class TestPreJoinCallback(Tester):
 
     def __init__(self, *args, **kwargs):
