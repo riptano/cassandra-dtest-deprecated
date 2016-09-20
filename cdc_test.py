@@ -7,7 +7,6 @@ import shutil
 import time
 import uuid
 from collections import namedtuple
-from distutils.version import LooseVersion
 from itertools import izip as zip
 from itertools import repeat
 
@@ -557,7 +556,7 @@ class TestCDC(Tester):
             msg='not all expected data selected'
         )
 
-        if LooseVersion(self.cluster.version()) >= LooseVersion('3.10'):
+        if self.cluster.version() >= '3.10':
             # Create ReplayData objects for each index file found in loading cluster
             loading_path = os.path.join(loading_node.get_path(), 'cdc_raw')
             dest_cdc_indexes = [ReplayData.load(loading_path, name)
