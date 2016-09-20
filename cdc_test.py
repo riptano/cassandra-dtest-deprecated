@@ -47,7 +47,7 @@ def _insert_rows(session, table_name, insert_stmt, values):
 
 
 def _move_commitlog_segments(source_dir, dest_dir, verbose=True):
-    for source_filename in [name for name in os.listdir(source_dir) if '_cdc' not in name]:
+    for source_filename in [name for name in os.listdir(source_dir) if not name.endswith('_cdc.idx')]:
         source_path, dest_path = (os.path.join(source_dir, source_filename),
                                   os.path.join(dest_dir, source_filename))
         if verbose:
@@ -518,7 +518,7 @@ class TestCDC(Tester):
         # We can rely on the existing _cdc.idx files to determine which .log files contain cdc data.
         source_path = os.path.join(generation_node.get_path(), 'cdc_raw')
         source_cdc_indexes = [ReplayData.load(source_path, name)
-                              for name in source_path if '_cdc' in name]
+                              for name in source_path if name.endswith('_cdc.idx')]
 
         # create a new node to use for cdc_raw cl segment replay
         loading_node = self._init_new_loading_node(ks_name, cdc_table_info.create_stmt)
@@ -560,7 +560,7 @@ class TestCDC(Tester):
             # Create ReplayData objects for each index file found in loading cluster
             loading_path = os.path.join(loading_node.get_path(), 'cdc_raw')
             dest_cdc_indexes = [ReplayData.load(loading_path, name)
-                                for name in os.listdir(loading_path) if '_cdc' in name]
+                                for name in os.listdir(loading_path) if name.endswith('_cdc.idx')]
 
             # Compare source replay data to dest to ensure replay process created both hard links and index files.
             for srd in source_cdc_indexes:
