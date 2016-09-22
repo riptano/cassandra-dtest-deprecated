@@ -253,6 +253,13 @@ class TestCDC(Tester):
         self.cluster.populate(1)
         self.cluster.set_configuration_options(dict(config_defaults, **configuration_overrides))
         self.cluster.start(wait_for_binary_proto=True)
+        # drain and bounce to get clean CLs. We do this to address
+        # CASSANDRA-11811, where mutations generated on startup get replayed
+        # when we replay commitlogs
+        self.cluster.drain()
+        self.cluster.stop()
+        self.cluster.start(wait_for_binary_proto=True)
+
         node = self.cluster.nodelist()[0]
         session = self.patient_cql_connection(node)
         self.create_ks(session, ks_name, rf=1)
