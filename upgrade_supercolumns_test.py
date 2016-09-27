@@ -14,7 +14,10 @@ from tools.decorators import known_failure, since
 from tools.flaky import RerunTestException, requires_rerun
 
 
-@since('2.0', max_version='2.1.x')
+COMPARATORS = ['BytesType', 'AsciiType', 'UTF8Type', 'IntegerType', 'LongType', 'DoubleType', 'BooleanType', 'DateType',
+               'TimestampType']
+
+
 class TestSCUpgrade(Tester):
     """
     Tests upgrade between 1.2->2.0 for super columns (since that's where we
@@ -37,6 +40,114 @@ class TestSCUpgrade(Tester):
             self.ignore_log_patterns += [_known_teardown_race_error]
 
         Tester.__init__(self, *args, **kwargs)
+
+    def prepare(self, num_nodes=2):
+        cluster = self.cluster
+
+        # Forcing cluster version on purpose
+        cluster.set_install_dir(version="1.2.19")
+        if "memtable_allocation_type" in cluster._config_options:
+            cluster._config_options.__delitem__("memtable_allocation_type")
+        cluster.populate(num_nodes).start()
+
+        return cluster.nodelist()
+
+    def connect_via_thrift(self, node):
+        host, port = node.network_interfaces['thrift']
+        client = get_thrift_client(host, port)
+        client.transport.open()
+        return client
+
+    def create_keyspace(self, client):
+        ksdef = KsDef()
+        ksdef.name = 'test'
+        ksdef.strategy_class = 'SimpleStrategy'
+        ksdef.strategy_options = {'replication_factor': '2'}
+        ksdef.durable_writes = True
+        ksdef.cf_defs = []
+
+        client.system_add_keyspace(ksdef)
+
+    def create_super_column_family(self, client, comparator_type, subcomparator_type, key_validation_class, default_validation_class):
+        cfdef = CfDef()
+        cfdef.keyspace = 'test'
+        cfdef.name = 'sc_test'
+        cfdef.column_type = 'Super'
+        cfdef.comparator_type = comparator_type
+        cfdef.subcomparator_type = subcomparator_type
+        cfdef.key_validation_class = key_validation_class
+        cfdef.default_validation_class = default_validation_class
+        cfdef.caching = 'rows_only'
+
+        client.system_add_column_family(cfdef)
+
+    def add_super_column_data(self, client):
+        for i in range(2):
+            supercol_name = 'sc{}'.format(i)
+            for j in range(2):
+                col_name = 'c{}'.format(j)
+                column = Column(name=col_name, value='v', timestamp=100)
+                client.batch_mutate(
+                    {'k0': {'sc_test': [Mutation(ColumnOrSuperColumn(super_column=SuperColumn(supercol_name, [column])))]}},
+                    ThriftConsistencyLevel.ONE)
+
+    def restart_nodes(self, nodelist):
+        for node in nodelist:
+            node.flush()
+            time.sleep(.5)
+            node.stop(wait_other_notice=True)
+            self.set_node_to_current_version(node)
+            node.start(wait_other_notice=True, wait_for_binary_proto=True)
+            time.sleep(.5)
+
+    def verify_with_thrift(self):
+        pass
+
+    def verify_with_cql(self):
+        pass
+
+    def upgrade_super_columns_through_versions_test(self):
+        node1, node2 = self.prepare()
+        session = self.patient_exclusive_cql_connection(node1)
+        client = self.connect_via_thrift(node1)
+
+        self.create_keyspace(client)
+        client.set_keyspace('test')
+        session.cluster.control_connection.wait_for_schema_agreement()
+
+        self.create_super_column_family(client, comparator_type='UTF8Type', subcomparator_type='UTF8Type',
+                                        key_validation_class='UTF8Type', default_validation_class='UTF8Type')
+        session.cluster.control_connection.wait_for_schema_agreement()
+
+        self.add_super_column_data(client)
+
+        self.verify_with_thrift()
+        self.verify_with_cql()
+
+        versions = ['git:cassandra-2.1', 'git:cassandra-2.2', 'git:cassandra-3.0', 'git:cassandra-3.9', 'git:cassandra-trunk']
+
+        for version in versions:
+            session.cluster.shutdown()
+            client.transport.close()
+            self.upgrade_to_version(version)
+            time.sleep(.5)
+
+            self.restart_nodes([node1, node2])
+
+            session = self.patient_exclusive_cql_connection(node1)
+
+            client = self.connect_via_thrift(node1)
+            client.transport.open()
+            client.set_keyspace('test')
+
+            self.verify_with_thrift()
+            self.verify_with_cql()
+            """
+            - modify / manipulate
+
+            verify_with_thrift()
+            verify_with_cql()
+            """
 
     @known_failure(failure_source='test',
                    jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12616',
