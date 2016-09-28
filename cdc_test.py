@@ -591,7 +591,7 @@ class TestCDC(Tester):
             )
 
 
-class ReplayData(namedtuple('_ReplayDataBase', ['idx_name', 'completed', 'offset', 'log_name'])):
+class ReplayData(namedtuple('ReplayData', ['idx_name', 'completed', 'offset', 'log_name'])):
     """
     Replay data class containing data from a _cdc.idx file. Build one with the load method.
     """
