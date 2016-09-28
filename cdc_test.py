@@ -611,6 +611,15 @@ class TestCDC(Tester):
             for src_rd, dest_rd in src_to_dest_idx_map.items():
                 self.assertGreaterEqual(dest_rd.offset, src_rd.offset)
 
+            src_to_dest_idx_map = {
+                src_rd: [dest_rd for dest_rd in dest_cdc_indexes
+                         if dest_rd.idx_name == src_rd.idx_name]
+                for src_rd in source_cdc_indexes
+            }
+            for k, v in src_to_dest_idx_map.items():
+                assert_length_equal(v, 1)
+                self.assertGreaterEqual(k.offset, v.offset)
+
 
 class ReplayData(namedtuple('ReplayData', ['idx_name', 'completed', 'offset', 'log_name'])):
     """
