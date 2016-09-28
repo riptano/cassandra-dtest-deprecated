@@ -518,9 +518,9 @@ class TestCDC(Tester):
 
         # We can rely on the existing _cdc.idx files to determine which .log files contain cdc data.
         source_path = os.path.join(generation_node.get_path(), 'cdc_raw')
-        source_cdc_indexes = [ReplayData.load(source_path, name)
-                              for name in source_path if name.endswith('_cdc.idx')]
-        self.assertGreater(len(source_cdc_indexes), 0)
+        source_cdc_indexes = {ReplayData.load(source_path, name)
+                              for name in source_path if name.endswith('_cdc.idx')}
+        self.assertNotEqual(source_cdc_indexes, {})
 
         # create a new node to use for cdc_raw cl segment replay
         loading_node = self._init_new_loading_node(ks_name, cdc_table_info.create_stmt)
