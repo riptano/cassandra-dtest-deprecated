@@ -9,6 +9,7 @@ import uuid
 from collections import namedtuple
 from itertools import izip as zip
 from itertools import repeat
+from pprint import pformat
 
 from cassandra import WriteFailure
 from cassandra.concurrent import (execute_concurrent,
@@ -584,10 +585,21 @@ class TestCDC(Tester):
                 # Confirm completed flag is the same in both
                 self.assertEqual(srd.completed, drd.completed)
 
-            # Confirm we don't have any extra cdc indexes created we don't expect
-            self.assertLessEqual(
-                {dest_rd.idx_name for dest_rd in dest_cdc_indexes},
-                {source_rd.idx_name for source_rd in source_cdc_indexes},
+            # Confirm we don't have any extra cdc indexes created we don't
+            # expect. This is trickier than you might think -- the destination
+            # node will make its own .idx files for in-flight commitlog
+            # segments, even if they don't contain CDC data. However, such
+            # indices will have an offset of 0.
+            shared_idx_files = {
+                rd for rd in dest_cdc_indexes
+                if rd.idx_name in {source_rd.idx_name for source_rd in source_cdc_indexes}
+            }
+            self.assertNotIn(
+                0,
+                {i.offset for i in shared_idx_files},
+                ('Found index offsets == 0 in index files that exist on both'
+                 'source and destination node:\n'
+                 '{}').format(pformat(shared_idx_files))
             )
 
 
