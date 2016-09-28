@@ -389,12 +389,12 @@ class TestRebuild(Tester):
         # populate data in dc1, dc2
         session = self.patient_exclusive_cql_connection(node1)
         # ks1 will be rebuilt in node3
-        self.create_ks(session, 'ks1', {'dc1': 1, 'dc2': 1})
-        self.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
+        create_ks(session, 'ks1', {'dc1': 1, 'dc2': 1})
+        create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
         insert_c1c2(session, n=keys, consistency=ConsistencyLevel.ALL)
         # ks2 will not be rebuilt in node3
-        self.create_ks(session, 'ks2', {'dc1': 1, 'dc2': 1})
-        self.create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
+        create_ks(session, 'ks2', {'dc1': 1, 'dc2': 1})
+        create_cf(session, 'cf', columns={'c1': 'text', 'c2': 'text'})
         insert_c1c2(session, n=keys, consistency=ConsistencyLevel.ALL)
         session.shutdown()
 
