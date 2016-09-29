@@ -585,22 +585,31 @@ class TestCDC(Tester):
                 # Confirm completed flag is the same in both
                 self.assertEqual(srd.completed, drd.completed)
 
-            # Confirm we don't have any extra cdc indexes created we don't
-            # expect. This is trickier than you might think -- the destination
-            # node will make its own .idx files for in-flight commitlog
-            # segments, even if they don't contain CDC data. However, such
-            # indices will have an offset of 0.
-            shared_idx_files = {
-                rd for rd in dest_cdc_indexes
-                if rd.idx_name in {source_rd.idx_name for source_rd in source_cdc_indexes}
+            # Confirm that the relationship between index files on the source
+            # and destination looks like we expect.
+            # First, grab the mapping between the two, make sure it's a 1-1
+            # mapping, and transform the dict to reflect that:
+            src_to_dest_idx_map = {
+                src_rd: [dest_rd for dest_rd in dest_cdc_indexes
+                         if dest_rd.idx_name == src_rd.idx_name]
+                for src_rd in source_cdc_indexes
             }
+            for src_rd, dest_rds in src_to_dest_idx_map.items():
+                assert_length_equal(dest_rds, 1)
+                src_to_dest_idx_map[src_rd] = dest_rds[0]
+            # All offsets in idx files that were copied should be >0 on the
+            # destination node.
             self.assertNotIn(
-                0,
-                {i.offset for i in shared_idx_files},
-                ('Found index offsets == 0 in index files that exist on both'
-                 'source and destination node:\n'
-                 '{}').format(pformat(shared_idx_files))
+                0, {i.offset for i in src_to_dest_idx_map.values()},
+                ('Found index offsets == 0 in an index file on the '
+                 'destination node that corresponds to an index file on the '
+                 'source node:\n'
+                 '{}').format(pformat(src_to_dest_idx_map))
             )
+            # Offsets of all shared indexes should be >= on the destination
+            # than on the source.
+            for src_rd, dest_rd in src_to_dest_idx_map.items():
+                self.assertGreaterEqual(dest_rd.offset, src_rd.offset)
 
 
 class ReplayData(namedtuple('ReplayData', ['idx_name', 'completed', 'offset', 'log_name'])):
