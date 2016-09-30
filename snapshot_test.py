@@ -219,7 +219,7 @@ class TestArchiveCommitlog(SnapshotTester):
                         [(r'^archive_command=.*$', 'archive_command={archive_command} %path {tmp_commitlog}/%name'.format(
                             tmp_commitlog=tmp_commitlog, archive_command=archive_command))])
 
-        cluster.start()
+        cluster.start(wait_for_binary_proto=True)
 
         session = self.patient_cql_connection(node1)
         create_ks(session, 'ks', 1)
@@ -254,6 +254,9 @@ class TestArchiveCommitlog(SnapshotTester):
             system_cfs_snapshot_dirs = self.make_snapshot(node1, 'system_schema', 'tables', 'cfs')
         else:
             system_cfs_snapshot_dirs = self.make_snapshot(node1, 'system', 'schema_columnfamilies', 'cfs')
+
+        system_peers_snapshot_dirs = self.make_snapshot(node1, 'system', 'peers', 'peers')
+        system_local_snapshot_dirs = self.make_snapshot(node1, 'system', 'local', 'local')
 
         try:
             # Write more data:
@@ -322,10 +325,17 @@ class TestArchiveCommitlog(SnapshotTester):
                     self.restore_snapshot(system_cfs_snapshot_dir, node1, 'system_schema', 'tables', 'cfs')
                 else:
                     self.restore_snapshot(system_cfs_snapshot_dir, node1, 'system', 'schema_columnfamilies', 'cfs')
+
+            for snapshot_dir in system_peers_snapshot_dirs:
+                self.restore_snapshot(snapshot_dir, node1, 'system', 'peers', 'peers')
+
+            for snapshot_dir in system_local_snapshot_dirs:
+                self.restore_snapshot(snapshot_dir, node1, 'system', 'local', 'local')
+
             for snapshot_dir in snapshot_dirs:
                 self.restore_snapshot(snapshot_dir, node1, 'ks', 'cf', 'basic')
 
-            cluster.start(wait_for_binary_proto=True)
+            cluster.start(wait_for_binary_proto=True, jvm_args=['-Dcassandra.load_ring_state=true'])
 
             session = self.patient_cql_connection(node1)
             node1.nodetool('refresh ks cf')
