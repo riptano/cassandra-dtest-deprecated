@@ -5,6 +5,7 @@ from time import sleep
 from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
                        Unavailable, WriteFailure, WriteTimeout)
 from cassandra.query import SimpleStatement
+from cassandra.protocol import ServerError
 from nose.tools import (assert_equal, assert_false, assert_regexp_matches,
                         assert_true)
 
