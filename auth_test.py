@@ -181,7 +181,6 @@ class TestAuth(Tester):
         self.assertFalse(users['cathy'])
         self.assertTrue(users['dave'])
 
-
     @since('2.2')
     def handle_corrupt_role_data_test(self):
         """
