@@ -1746,9 +1746,6 @@ class TestMaterializedViewsLockcontention(Tester):
     """
 
     def _prepare_cluster(self):
-        expected_error = (r"Class JavaLaunchHelper is implemented in both")
-        self.ignore_log_patterns = [expected_error]
-
         self.cluster.populate(1)
 
         self.cluster.set_configuration_options(values={
