@@ -1736,7 +1736,6 @@ class TestMaterializedViewsConsistency(Tester):
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-KEYSPACE = "locktest"
 
 @since('3.0')
 class TestMaterializedViewsLockcontention(Tester):
@@ -1765,11 +1764,12 @@ class TestMaterializedViewsLockcontention(Tester):
 
         session = self.patient_exclusive_cql_connection(self.nodes[0], protocol_version=5)
 
+        keyspace = "locktest"
         session.execute("""
             CREATE KEYSPACE IF NOT EXISTS %s
             WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }
-            """ % (KEYSPACE))
-        session.set_keyspace(KEYSPACE)
+            """ % (keyspace))
+        session.set_keyspace(keyspace)
 
         session.execute("CREATE TABLE IF NOT EXISTS test (int1 int, int2 int, date timestamp, PRIMARY KEY (int1, int2))")
         session.execute("""CREATE MATERIALIZED VIEW test_mv AS
@@ -1783,7 +1783,7 @@ class TestMaterializedViewsLockcontention(Tester):
 
     @since('3.0')
     def test_mutations_dontblock(self):
-        session =self._prepare_cluster()
+        session = self._prepare_cluster()
         records = 100
         records2 = 100
         for x in xrange(records):
