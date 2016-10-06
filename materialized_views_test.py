@@ -8,6 +8,7 @@ from multiprocessing import Process, Queue
 from unittest import skip, skipIf
 
 from cassandra import ConsistencyLevel
+from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 # TODO add in requirements.txt
@@ -21,7 +22,7 @@ from tools.assertions import (assert_all, assert_crc_check_chance_equal,
                               assert_unavailable)
 from tools.decorators import known_failure, since
 from tools.misc import new_node
-from tools.jmxutils import (JolokiaAgent, make_mbean)
+from tools.jmxutils import (JolokiaAgent, make_mbean, remove_perf_disable_shared_mem)
 
 # CASSANDRA-10978. Migration wait (in seconds) to use in bootstrapping tests. Needed to handle
 # pathological case of flushing schema keyspace for multiple data directories. See CASSANDRA-6696
@@ -1753,28 +1754,31 @@ class TestMaterializedViewsLockcontention(Tester):
             'concurrent_materialized_view_writes': 1,
             'concurrent_writes': 1,
         })
+        self.nodes = self.cluster.nodes.values()
+        for node in self.nodes:
+            remove_perf_disable_shared_mem(node)
+
         self.cluster.start(wait_for_binary_proto=True, jvm_args=[
             "-Dcassandra.test.fail_mv_locks_count=64"
         ])
-
-        self.nodes = self.cluster.nodes.values()
 
         session = self.patient_exclusive_cql_connection(self.nodes[0], protocol_version=5)
 
         keyspace = "locktest"
         session.execute("""
-            CREATE KEYSPACE IF NOT EXISTS %s
-            WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }
-            """ % (keyspace))
+                CREATE KEYSPACE IF NOT EXISTS {}
+                WITH replication = {{ 'class': 'SimpleStrategy', 'replication_factor': '1' }}
+                """.format(keyspace))
         session.set_keyspace(keyspace)
 
-        session.execute("CREATE TABLE IF NOT EXISTS test (int1 int, int2 int, date timestamp, PRIMARY KEY (int1, int2))")
-        session.execute("""CREATE MATERIALIZED VIEW test_mv AS
-    SELECT int1, date, int2
-    FROM test
-    WHERE int1 IS NOT NULL AND date IS NOT NULL AND int2 IS NOT NULL
-    PRIMARY KEY (int1, date, int2)
-    WITH CLUSTERING ORDER BY (date DESC, int1 DESC)""")
+        session.execute(
+            "CREATE TABLE IF NOT EXISTS test (int1 int, int2 int, date timestamp, PRIMARY KEY (int1, int2))")
+        session.execute("""CREATE MATERIALIZED VIEW test_sorted_mv AS
+        SELECT int1, date, int2
+        FROM test
+        WHERE int1 IS NOT NULL AND date IS NOT NULL AND int2 IS NOT NULL
+        PRIMARY KEY (int1, date, int2)
+        WITH CLUSTERING ORDER BY (date DESC, int1 DESC)""")
 
         return session
 
@@ -1783,9 +1787,16 @@ class TestMaterializedViewsLockcontention(Tester):
         session = self._prepare_cluster()
         records = 100
         records2 = 100
+        params = []
         for x in xrange(records):
             for y in xrange(records2):
-                session.execute_async("INSERT INTO test (int1, int2, date) VALUES ({}, {}, toTimestamp(now()))".format(x, y))
+                params.append([x, y])
+
+        execute_concurrent_with_args(
+            session,
+            session.prepare('INSERT INTO test (int1, int2, date) VALUES (?, ?, toTimestamp(now()))'),
+            params
+        )
 
         assert_one(session, "SELECT count(*) FROM test WHERE int1 = 1", [records2])
 
