@@ -543,7 +543,6 @@ class TestCompaction(Tester):
 
         # trigger the compaction
         node1.compact()
-        
         # check the sstable count in each level again
         output = grep_sstables_in_each_level(node1, table_name)
 
