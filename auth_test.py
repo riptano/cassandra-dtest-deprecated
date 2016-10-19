@@ -8,7 +8,8 @@ from cassandra.protocol import SyntaxException, ServerError
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from tools.assertions import (assert_all, assert_invalid, assert_one,
-                              assert_unauthorized, assert_exception)
+                              assert_unauthorized, assert_exception,
+                              assert_length_equal)
 from tools.decorators import known_failure, since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
@@ -191,15 +192,16 @@ class TestAuth(Tester):
         * Manually corrupt / delete the is_superuser cell of that role
         * Confirm that listing users shows an invalid request
         * Confirm that corrupted user can no longer login
+        @jira_ticket CASSANDRA-12700
         """
         self.prepare()
 
         session = self.get_session(user='cassandra', password='cassandra')
         session.execute("CREATE USER bob WITH PASSWORD '12345' SUPERUSER")
 
-        session2 = self.get_session(user='bob', password='12345')
-        rows = list(session2.execute("LIST USERS"))
-        self.assertEqual(2, len(rows))
+        bob = self.get_session(user='bob', password='12345')
+        rows = list(bob.execute("LIST USERS"))
+        assert_length_equal(2, len(rows))
 
         session.execute("UPDATE system_auth.roles SET is_superuser=null WHERE role='bob'")
 
