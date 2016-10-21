@@ -518,6 +518,11 @@ class TestCompaction(Tester):
         """
         @jira_ticket CASSANDRA-11550
         """
+        if not hasattr(self, 'strategy'):
+            self.strategy = 'LeveledCompactionStrategy'
+        if self.strategy != 'LeveledCompactionStrategy':
+            self.skipTest('Not implemented unless LeveledCompactionStrategy is used')
+
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -529,7 +534,7 @@ class TestCompaction(Tester):
         debug("Altering compaction strategy to LCS")
         session.execute("ALTER TABLE keyspace1.standard1 with compaction={'class': 'LeveledCompactionStrategy', 'sstable_size_in_mb':1, 'fanout_size':10};")
 
-        stress_write(node1, keycount=500000)
+        stress_write(node1, keycount=1000000)
         node1.nodetool('flush keyspace1 standard1')
 
         # trigger the compaction
