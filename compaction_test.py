@@ -518,9 +518,7 @@ class TestCompaction(Tester):
         """
         @jira_ticket CASSANDRA-11550
         """
-        if not hasattr(self, 'strategy'):
-            self.strategy = 'LeveledCompactionStrategy'
-        if self.strategy != 'LeveledCompactionStrategy':
+        if not hasattr(self, 'strategy') or self.strategy != 'LeveledCompactionStrategy':
             self.skipTest('Not implemented unless LeveledCompactionStrategy is used')
 
         cluster = self.cluster
