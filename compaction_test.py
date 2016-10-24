@@ -511,9 +511,6 @@ class TestCompaction(Tester):
                           'Expected one sstable data file per node directory but got {}'.format(sstable_files))
 
     @since('3.10')
-    @known_failure(failure_source='test',
-                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12822',
-                   flaky=True)
     def fanout_size_test(self):
         """
         @jira_ticket CASSANDRA-11550
