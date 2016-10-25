@@ -1064,6 +1064,11 @@ class TestPreJoinCallback(Tester):
             node2.start(wait_for_binary_proto=True)
             self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
 
+            # verify on restart the JOINING mode is still set
+            node2.stop(wait=True)
+            node2.start(wait_for_binary_proto=True)
+            self.assertTrue(node2.grep_log('Finish joining ring'))
+
         self._base_test(bootstrap)
 
     def resume_test(self):
