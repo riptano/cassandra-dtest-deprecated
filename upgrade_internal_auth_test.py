@@ -60,7 +60,7 @@ class TestAuthUpgrade(Tester):
         cluster.add(node3, False)
         node3.start()
 
-        time.sleep(15)
+        node3.watch_log_for('Created default superuser')
 
         node3.drain()
         node3.watch_log_for("DRAINED")
