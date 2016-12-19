@@ -33,7 +33,6 @@ from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy
 from ccmlib.cluster import Cluster
 from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
-from ccmlib.node import TimeoutError
 from nose.exc import SkipTest
 from nose.tools import assert_greater_equal
 from six import print_

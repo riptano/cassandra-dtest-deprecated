@@ -138,7 +138,7 @@ class TestSecondaryIndexes(Tester):
         # keyspace calls that come later. See CASSANDRA-11729.
         if self.cluster.version() > '3.0':
             self.cluster.wait_for_any_log('Completed submission of build tasks for any materialized views',
-                                  timeout=35, filename='debug.log')
+                                          timeout=35, filename='debug.log')
 
         # This only occurs when dropping and recreating with
         # the same name, so loop through this test a few times:
@@ -486,6 +486,7 @@ class TestSecondaryIndexes(Tester):
 
 
 class TestSecondaryIndexesOnCollections(Tester):
+
     def test_tuple_indexes(self):
         """
         Checks that secondary indexes on tuples work for querying
