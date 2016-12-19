@@ -137,7 +137,7 @@ class TestSecondaryIndexes(Tester):
         # to complete, to prevent schema concurrency issues with the drop
         # keyspace calls that come later. See CASSANDRA-11729.
         if self.cluster.version() > '3.0':
-            self.wait_for_any_log(self.cluster.nodelist(), 'Completed submission of build tasks for any materialized views',
+            self.cluster.wait_for_any_log('Completed submission of build tasks for any materialized views',
                                   timeout=35, filename='debug.log')
 
         # This only occurs when dropping and recreating with
