@@ -441,6 +441,7 @@ class TestStorageEngineUpgrade(Tester):
         session = self._do_upgrade()
         assert_none(session, "SELECT k FROM test")
 
+
 @since('3.0')
 class TestBootstrapAfterUpgrade(TestStorageEngineUpgrade):
 
