@@ -1845,7 +1845,8 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT * FROM testcf2 LIMIT 5;", [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]])
 
-    def bug_4532_test(self):
+    def npe_composite_table_slice_test(self):
+        """ Test for NPE when trying to select a slice from a composite table (ASF JIRA #4532) """
 
         cursor = self.prepare()
         cursor.execute("""
@@ -1870,11 +1871,11 @@ class TestCQL(UpgradeTester):
             cursor.execute("INSERT INTO compositetest(status,ctime,key,nil) VALUES ('C',12345680,'key6','')")
 
             assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime>=12345679 AND key='key3' AND ctime<=12345680 LIMIT 3;")
-            assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime=12345679  AND key='key3' AND ctime<=12345680 LIMIT 3")
+            assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime=12345679  AND key='key3' AND ctime<=12345680 LIMIT 3;")
 
     @freshCluster()
     def order_by_multikey_test(self):
-        """ Test for #4612 bug and more generaly order by when multiple C* rows are queried """
+        """ Test for #4612 bug and more generally order by when multiple C* rows are queried """
 
         cursor = self.prepare(ordered=True)
         cursor.execute("""
