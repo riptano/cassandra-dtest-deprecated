@@ -1846,7 +1846,10 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT * FROM testcf2 LIMIT 5;", [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]])
 
     def npe_composite_table_slice_test(self):
-        """ Test for NPE when trying to select a slice from a composite table (ASF JIRA #4532) """
+        """
+        Test for NPE when trying to select a slice from a composite table
+        @jira_ticket CASSANDRA-4532
+        """
 
         cursor = self.prepare()
         cursor.execute("""
