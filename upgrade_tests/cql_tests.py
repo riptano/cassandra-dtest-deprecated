@@ -2252,7 +2252,6 @@ class TestCQL(UpgradeTester):
         namely the fact that SliceQueryFilter groups columns by prefix before counting them.
         @jira_ticket CASSANDRA-4882
         """
-
         cursor = self.prepare()
 
         cursor.execute("""
@@ -2861,7 +2860,12 @@ class TestCQL(UpgradeTester):
 
     # Fixed by CASSANDRA-12654 in 3.12
     @since('2.0', max_version='3.12')
-    def bug_5376_test(self):
+    def IN_clause_on_last_key_test(self):
+        """
+        Tests patch to improve validation by not throwing an assertion when using map, list, or set
+        with IN clauses on the last key.
+        @jira_ticket CASSANDRA-5376
+        """
         cursor = self.prepare()
 
         cursor.execute("""
