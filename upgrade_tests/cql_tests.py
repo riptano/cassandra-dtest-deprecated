@@ -2245,7 +2245,14 @@ class TestCQL(UpgradeTester):
             assert_invalid(cursor, "SELECT c1, c2 FROM test WHERE k = 'foo' ORDER BY c2 ASC")
             assert_invalid(cursor, "SELECT c1, c2 FROM test WHERE k = 'foo' ORDER BY c1 ASC, c2 ASC")
 
-    def bug_4882_test(self):
+    def returned_null_test(self):
+        """
+        Test for returned null.
+        StorageProxy short read protection hadn't been updated after the changes made by CASSANDRA-3647,
+        namely the fact that SliceQueryFilter groups columns by prefix before counting them.
+        @jira_ticket CASSANDRA-4882
+        """
+
         cursor = self.prepare()
 
         cursor.execute("""
@@ -2773,7 +2780,13 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT value FROM indexed WHERE pk0 = 5 AND pk1 = 0 AND ck0 = 1 AND ck2 = 3 ALLOW FILTERING", [[4]])
 
-    def bug_5240_test(self):
+    def end_of_component_as_end_key_test(self):
+        """
+        Test to make sure that an end-of-component is no longer being used as the end key of the range when
+        a secondary index is involved.
+        @jira_ticket CASSANDRA-5240
+        """
+
         cursor = self.prepare()
 
         cursor.execute("""
