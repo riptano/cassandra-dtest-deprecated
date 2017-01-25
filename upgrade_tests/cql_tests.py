@@ -2899,7 +2899,11 @@ class TestCQL(UpgradeTester):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             cursor.execute("INSERT INTO test (k, c, v) VALUES (0, now(), 0);")
 
-    def bug_5404_test(self):
+    def NPE_during_select_with_token_test(self):
+        """
+        Test for NPE during CQL3 select with token()
+        @jira_ticket CASSANDRA-5404
+        """
         cursor = self.prepare()
 
         cursor.execute("CREATE TABLE test (key text PRIMARY KEY)")
@@ -3383,7 +3387,11 @@ class TestCQL(UpgradeTester):
                 assert_one(cursor, "UPDATE tkns SET consumed = TRUE WHERE tkn = {} IF consumed = FALSE;".format(i), [True], cl=ConsistencyLevel.QUORUM)
                 assert_one(cursor, "UPDATE tkns SET consumed = TRUE WHERE tkn = {} IF consumed = FALSE;".format(i), [False, True], cl=ConsistencyLevel.QUORUM)
 
-    def bug_6050_test(self):
+    def internal_application_error_on_select_test(self):
+        """
+        Test for 'Internal application error' on SELECT .. WHERE col1=val AND col2 IN (1,2)
+        @jira_ticket CASSANDRA-6050
+        """
         cursor = self.prepare()
 
         cursor.execute("""
@@ -3400,7 +3408,11 @@ class TestCQL(UpgradeTester):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             assert_invalid(cursor, "SELECT * FROM test WHERE a = 3 AND b IN (1, 3)")
 
-    def bug_6069_test(self):
+    def store_sets_with_if_not_exists_test(self):
+        """
+        Test to fix bug where sets are not stored by INSERT with IF NOT EXISTS
+        @jira_ticket CASSANDRA-6069
+        """
         cursor = self.prepare()
 
         cursor.execute("""
@@ -3417,7 +3429,11 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "INSERT INTO test(k, s) VALUES (0, {1, 2, 3}) IF NOT EXISTS", [True])
             assert_one(cursor, "SELECT * FROM test", [0, {1, 2, 3}], cl=ConsistencyLevel.SERIAL)
 
-    def bug_6115_test(self):
+    def add_deletion_info_in_unsorted_column_test(self):
+        """
+        Test that UnsortedColumns.addAll(ColumnFamily) adds the deletion info of the CF in argument.
+        @jira_ticket CASSANDRA-6115
+        """
         cursor = self.prepare()
 
         cursor.execute("CREATE TABLE test (k int, v int, PRIMARY KEY (k, v))")
@@ -3547,7 +3563,11 @@ class TestCQL(UpgradeTester):
             # TODO: check result once we have an easy way to do it. For now we just check it doesn't crash
             cursor.execute("SELECT * FROM test")
 
-    def bug_6327_test(self):
+    def intersection_logic_returns_empty_result_test(self):
+        """
+        Test for bug in the column slice intersection logic where select with "in" clause wrongly returns empty result
+        @jira_ticket CASSANDRA-6327
+        """
         cursor = self.prepare()
 
         cursor.execute("""
@@ -4914,7 +4934,12 @@ class TestCQL(UpgradeTester):
 
             assert_one(cursor, "SELECT * FROM test WHERE a=1 AND b=2 ORDER BY b DESC", [1, 2, 3, 3])
 
-    def bug_6612_test(self):
+    def SIM_assertion_error_test(self):
+        """
+        Test for bogus logic in hasIndexFor when there is more than one searcher and that
+        all internal indexes are grouped properly in getIndexSearchersForQuery.
+        @jira_ticket CASSANDRA-6612
+        """
         cursor = self.prepare()
 
         cursor.execute("""
@@ -5163,7 +5188,11 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT sizeof(v) FROM test", [[4], [4]])
 
-    def bug_8558_test(self):
+    def deleted_row_select_test(self):
+        """
+        Test to make sure deleted rows cannot still be selected out.
+        @jira_ticket CASSANDRA-8558
+        """
         cursor = self.prepare()
         node1 = self.cluster.nodelist()[0]
 
@@ -5181,7 +5210,11 @@ class TestCQL(UpgradeTester):
 
             assert_none(cursor, "select * from space1.table1 where a=1 and b=1")
 
-    def bug_5732_test(self):
+    def secondary_index_query_test(self):
+        """
+        Test for fix to bug where secondary index cannot be queried due to Column Family caching changes.
+        @jira_ticket CASSANDRA-5732
+        """
         cursor = self.prepare(use_cache=True)
 
         cursor.execute("""
@@ -5233,7 +5266,12 @@ class TestCQL(UpgradeTester):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             assert_all(cursor, "SELECT k FROM ks.test WHERE v = 0", [[0]])
 
-    def bug_10652_test(self):
+    def tracing_prevents_startup_after_upgrading_test(self):
+        """
+        Test that after upgrading from 2.1 to 3.0, the system_traces.sessions table is properly upgraded to include
+        the client column.
+        @jira_ticket CASSANDRA-10652
+        """
         cursor = self.prepare()
 
         cursor.execute("CREATE KEYSPACE foo WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}")
