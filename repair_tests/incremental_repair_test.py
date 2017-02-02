@@ -28,24 +28,25 @@ class ConsistentState(object):
 class TestIncRepair(Tester):
     ignore_log_patterns = (r'Can\'t send migration request: node.*is down',)
 
-    _sstable_name = compile('SSTable: (.+)')
-    _repaired_at = compile('Repaired at: (\d+)')
-    _pending_repair = compile('Pending repair: (null|[a-f0-9\-]+)')
-    _sstable_data = namedtuple('_sstabledata', ('name', 'repaired', 'pending_id'))
 
     @classmethod
     def _get_repaired_data(cls, node, keyspace):
+        _sstable_name = compile('SSTable: (.+)')
+        _repaired_at = compile('Repaired at: (\d+)')
+        _pending_repair = compile('Pending repair: (null|[a-f0-9\-]+)')
+        _sstable_data = namedtuple('_sstabledata', ('name', 'repaired', 'pending_id'))
+
         out = node.run_sstablemetadata(keyspace=keyspace).stdout
         matches = lambda pattern: filter(None, [pattern.match(l) for l in out.split('\n')])
-        names = [m.group(1) for m in matches(cls._sstable_name)]
-        repaired_times = [int(m.group(1)) for m in matches(cls._repaired_at)]
+        names = [m.group(1) for m in matches(_sstable_name)]
+        repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
         uuid_or_none = lambda s: None if s == 'null' else UUID(s)
-        pending_repairs = [uuid_or_none(m.group(1)) for m in matches(cls._pending_repair)]
+        pending_repairs = [uuid_or_none(m.group(1)) for m in matches(_pending_repair)]
         assert names
         assert repaired_times
         assert pending_repairs
         assert len(names) == len(repaired_times) == len(pending_repairs)
-        return [cls._sstable_data(*a) for a in zip(names, repaired_times, pending_repairs)]
+        return [_sstable_data(*a) for a in zip(names, repaired_times, pending_repairs)]
 
     def assertNoRepairedSSTables(self, node, keyspace):
         """ Checks that no sstables are marked repaired, and none are marked pending repair """
