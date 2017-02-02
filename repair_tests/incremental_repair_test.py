@@ -28,7 +28,7 @@ class ConsistentState(object):
 class TestIncRepair(Tester):
     ignore_log_patterns = (r'Can\'t send migration request: node.*is down',)
 
-    _sstable_name = compile('Repaired at: (\d+)')
+    _sstable_name = compile('SSTable: (.+)')
     _repaired_at = compile('Repaired at: (\d+)')
     _pending_repair = compile('Pending repair: (null|[a-f0-9\-]+)')
     _sstable_data = namedtuple('_sstabledata', ('name', 'repaired', 'pending_id'))
