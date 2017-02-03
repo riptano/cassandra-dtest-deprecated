@@ -10,15 +10,18 @@ from dtest import DISABLE_VNODES
 
 class since(object):
 
-    def __init__(self, cass_version, max_version=None):
+    def __init__(self, cass_version, max_version=None, max_version_exclusive=None):
         self.cass_version = LooseVersion(cass_version)
         self.max_version = max_version
         if self.max_version is not None:
             self.max_version = LooseVersion(self.max_version)
+        self.max_version_exclusive = LooseVersion(max_version_exclusive) if max_version_exclusive else None
 
     def _skip_msg(self, version):
         if version < self.cass_version:
             return "%s < %s" % (version, self.cass_version)
+        if self.max_version_exclusive and version >= self.max_version_exclusive:
+            return "%s >= %s" % (version, self.max_version_exclusive)
         if self.max_version and version > self.max_version:
             return "%s > %s" % (version, self.max_version)
 

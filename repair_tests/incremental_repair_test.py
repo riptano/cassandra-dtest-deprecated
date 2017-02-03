@@ -186,7 +186,6 @@ class TestIncRepair(Tester):
 
         session_id = self._make_fake_session('ks', 'tbl')
 
-        # import ipdb; ipdb.set_trace()
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
             lines = out.stdout.split('\n')
@@ -225,7 +224,6 @@ class TestIncRepair(Tester):
 
         session_id = self._make_fake_session('ks', 'tbl')
 
-        # import ipdb; ipdb.set_trace()
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
             lines = out.stdout.split('\n')
@@ -318,6 +316,11 @@ class TestIncRepair(Tester):
             node3.repair()
         else:
             node3.nodetool("repair -par -inc")
+
+        if cluster.version() >= '4.0':
+            # sstables are compacted out of pending repair by a compaction
+            for node in cluster.nodelist():
+                node.nodetool('compact keyspace1 standard1')
 
         for out in (node.run_sstablemetadata(keyspace='keyspace1').stdout for node in cluster.nodelist()):
             self.assertNotIn('Repaired at: 0', out)
@@ -453,6 +456,11 @@ class TestIncRepair(Tester):
             node1.repair()
         else:
             node1.nodetool("repair -par -inc")
+
+        if cluster.version() >= '4.0':
+            # sstables are compacted out of pending repair by a compaction
+            for node in cluster.nodelist():
+                node.nodetool('compact keyspace1 standard1')
 
         finalOut1 = node1.run_sstablemetadata(keyspace='keyspace1').stdout
         finalOut2 = node2.run_sstablemetadata(keyspace='keyspace1').stdout
