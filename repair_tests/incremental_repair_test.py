@@ -16,6 +16,7 @@ from tools.assertions import assert_almost_equal, assert_one
 from tools.data import insert_c1c2
 from tools.decorators import since
 
+
 class ConsistentState(object):
     PREPARING = 0
     PREPARED = 1
@@ -27,7 +28,6 @@ class ConsistentState(object):
 
 class TestIncRepair(Tester):
     ignore_log_patterns = (r'Can\'t send migration request: node.*is down',)
-
 
     @classmethod
     def _get_repaired_data(cls, node, keyspace):
@@ -69,6 +69,8 @@ class TestIncRepair(Tester):
         self.assertTrue(all([t.repaired > 0 for t in data]), '{}'.format(data))
         self.assertTrue(all([t.pending_id == None for t in data]), '{}'.format(data))
 
+    @skip('await CASSANDRA-9143')
+    @since('4.0')
     def consistent_repair_test(self):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'num_tokens': 1, 'commitlog_sync_period_in_ms': 500})
@@ -168,6 +170,8 @@ class TestIncRepair(Tester):
 
         return session_id
 
+    @skip('await CASSANDRA-9143')
+    @since('4.0')
     def manual_session_fail_test(self):
         """ check manual failing of repair sessions via nodetool works properly """
         cluster = self.cluster
@@ -196,7 +200,6 @@ class TestIncRepair(Tester):
 
         node1.nodetool("repair_admin --cancel {}".format(session_id))
 
-
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin --all')
             lines = out.stdout.split('\n')
@@ -205,7 +208,8 @@ class TestIncRepair(Tester):
             self.assertIn(str(session_id), line)
             self.assertIn("FAILED", line)
 
-
+    @skip('await CASSANDRA-9143')
+    @since('4.0')
     def manual_session_cancel_non_coordinator_failure_test(self):
         """ check manual failing of repair sessions via a node other than the coordinator fails """
         cluster = self.cluster
@@ -247,6 +251,8 @@ class TestIncRepair(Tester):
             self.assertIn(str(session_id), line)
             self.assertIn("REPAIRING", line)
 
+    @skip('await CASSANDRA-9143')
+    @since('4.0')
     def manual_session_force_cancel_test(self):
         """ check manual failing of repair sessions via a non-coordinator works if the --force flag is set """
         cluster = self.cluster
