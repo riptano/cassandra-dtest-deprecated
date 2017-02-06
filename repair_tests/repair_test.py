@@ -1048,7 +1048,7 @@ class TestRepair(BaseRepairTest):
         """
         self._test_failure_during_repair(phase='sync', initiator=False,)
 
-    @since('2.2')
+    @since('2.2', max_version_exclusive='4.0')
     def test_failure_during_anticompaction(self):
         """
         @jira_ticket CASSANDRA-12901
@@ -1137,7 +1137,10 @@ class TestRepair(BaseRepairTest):
         self.assertFalse(t.isAlive(), 'Repair still running after sync {} was killed'
                                       .format("initiator" if initiator else "participant"))
 
-        node1.watch_log_for('Endpoint .* died', timeout=60)
+        if cluster.version() < '4.0' or phase != 'sync':
+            # the log entry we're watching for in the sync task came from the
+            # anti compaction at the end of the repair, which has been removed in 4.0
+            node1.watch_log_for('Endpoint .* died', timeout=60)
         node1.watch_log_for('Repair command .* finished', timeout=60)
 
 
