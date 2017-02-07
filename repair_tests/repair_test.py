@@ -151,7 +151,7 @@ class BaseRepairTest(Tester):
 class TestRepair(BaseRepairTest):
     __test__ = True
 
-    @since('2.2.1', max_version_exclusive='4.0')
+    @since('2.2.1', '4')
     def no_anticompaction_after_dclocal_repair_test(self):
         """
         * Launch a four node, two DC cluster
@@ -220,7 +220,7 @@ class TestRepair(BaseRepairTest):
             self.assertTrue('Unknown keyspace/cf pair' in nodetool_error.message,
                             'Repair thread on inexistent table did not detect inexistent table.')
 
-    @since('2.2.1', max_version_exclusive='4.0')
+    @since('2.2.1', '4')
     def no_anticompaction_after_hostspecific_repair_test(self):
         """
         * Launch a four node, two DC cluster
@@ -241,7 +241,7 @@ class TestRepair(BaseRepairTest):
         for node in cluster.nodelist():
             self.assertFalse(node.grep_log("Starting anticompaction"))
 
-    @since('2.2.4', max_version_exclusive='4.0')
+    @since('2.2.4', '4')
     def no_anticompaction_after_subrange_repair_test(self):
         """
         * Launch a three node, two DC cluster
@@ -262,7 +262,7 @@ class TestRepair(BaseRepairTest):
         for node in cluster.nodelist():
             self.assertFalse(node.grep_log("Starting anticompaction"))
 
-    @since('2.2.1', max_version_exclusive='4.0')
+    @since('2.2.1', '4')
     def anticompaction_after_normal_repair_test(self):
         """
         * Launch a four node, two DC cluster
@@ -1048,7 +1048,7 @@ class TestRepair(BaseRepairTest):
         """
         self._test_failure_during_repair(phase='sync', initiator=False,)
 
-    @since('2.2', max_version_exclusive='4.0')
+    @since('2.2', '4')
     def test_failure_during_anticompaction(self):
         """
         @jira_ticket CASSANDRA-12901
