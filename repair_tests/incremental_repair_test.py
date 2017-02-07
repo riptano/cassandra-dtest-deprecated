@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 from collections import Counter, namedtuple
-from re import findall, match, compile
+from re import findall, compile
 from unittest import skip
 from uuid import UUID, uuid1
 
