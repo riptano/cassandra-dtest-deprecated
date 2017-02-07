@@ -69,7 +69,6 @@ class TestIncRepair(Tester):
         self.assertTrue(all([t.repaired > 0 for t in data]), '{}'.format(data))
         self.assertTrue(all([t.pending_id == None for t in data]), '{}'.format(data))
 
-    @skip('await CASSANDRA-9143')
     @since('4.0')
     def consistent_repair_test(self):
         cluster = self.cluster
@@ -170,7 +169,6 @@ class TestIncRepair(Tester):
 
         return session_id
 
-    @skip('await CASSANDRA-9143')
     @since('4.0')
     def manual_session_fail_test(self):
         """ check manual failing of repair sessions via nodetool works properly """
@@ -208,7 +206,6 @@ class TestIncRepair(Tester):
             self.assertIn(str(session_id), line)
             self.assertIn("FAILED", line)
 
-    @skip('await CASSANDRA-9143')
     @since('4.0')
     def manual_session_cancel_non_coordinator_failure_test(self):
         """ check manual failing of repair sessions via a node other than the coordinator fails """
@@ -251,7 +248,6 @@ class TestIncRepair(Tester):
             self.assertIn(str(session_id), line)
             self.assertIn("REPAIRING", line)
 
-    @skip('await CASSANDRA-9143')
     @since('4.0')
     def manual_session_force_cancel_test(self):
         """ check manual failing of repair sessions via a non-coordinator works if the --force flag is set """
