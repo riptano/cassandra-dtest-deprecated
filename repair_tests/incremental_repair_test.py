@@ -37,10 +37,14 @@ class TestIncRepair(Tester):
         _sstable_data = namedtuple('_sstabledata', ('name', 'repaired', 'pending_id'))
 
         out = node.run_sstablemetadata(keyspace=keyspace).stdout
-        matches = lambda pattern: filter(None, [pattern.match(l) for l in out.split('\n')])
+
+        def matches(pattern):
+            return filter(None, [pattern.match(l) for l in out.split('\n')])
         names = [m.group(1) for m in matches(_sstable_name)]
         repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
-        uuid_or_none = lambda s: None if s == 'null' else UUID(s)
+
+        def uuid_or_none(s):
+            return None if s == 'null' else UUID(s)
         pending_repairs = [uuid_or_none(m.group(1)) for m in matches(_pending_repair)]
         assert names
         assert repaired_times
@@ -52,7 +56,7 @@ class TestIncRepair(Tester):
         """ Checks that no sstables are marked repaired, and none are marked pending repair """
         data = self._get_repaired_data(node, keyspace)
         self.assertTrue(all([t.repaired == 0 for t in data]), '{}'.format(data))
-        self.assertTrue(all([t.pending_id == None for t in data]))
+        self.assertTrue(all([t.pending_id is None for t in data]))
 
     def assertAllPendingRepairSSTables(self, node, keyspace, pending_id=None):
         """ Checks that no sstables are marked repaired, and all are marked pending repair """
@@ -61,13 +65,13 @@ class TestIncRepair(Tester):
         if pending_id:
             self.assertTrue(all([t.pending_id == pending_id for t in data]))
         else:
-            self.assertTrue(all([t.pending_id != None for t in data]))
+            self.assertTrue(all([t.pending_id is not None for t in data]))
 
     def assertAllRepairedSSTables(self, node, keyspace):
         """ Checks that all sstables are marked repaired, and none are marked pending repair """
         data = self._get_repaired_data(node, keyspace)
         self.assertTrue(all([t.repaired > 0 for t in data]), '{}'.format(data))
-        self.assertTrue(all([t.pending_id == None for t in data]), '{}'.format(data))
+        self.assertTrue(all([t.pending_id is None for t in data]), '{}'.format(data))
 
     @since('4.0')
     def consistent_repair_test(self):
@@ -91,14 +95,14 @@ class TestIncRepair(Tester):
 
         session = self.exclusive_cql_connection(node1)
         for i in range(10):
-            session.execute(stmt, (i+10, i+10))
+            session.execute(stmt, (i + 10, i + 10))
         node1.flush()
         time.sleep(1)
         node1.stop(gently=False)
         node3.start(wait_other_notice=True, wait_for_binary_proto=True)
         session = self.exclusive_cql_connection(node2)
         for i in range(10):
-            session.execute(stmt, (i+20, i+20))
+            session.execute(stmt, (i + 20, i + 20))
         node1.start(wait_other_notice=True, wait_for_binary_proto=True)
 
         # flush and check that no sstables are marked repaired
@@ -237,7 +241,7 @@ class TestIncRepair(Tester):
             node2.nodetool("repair_admin --cancel {}".format(session_id))
             self.fail("cancel from a non coordinator should fail")
         except ToolError:
-            pass # expected
+            pass  # expected
 
         # nothing should have changed
         for node in self.cluster.nodelist():

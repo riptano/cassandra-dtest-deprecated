@@ -1096,7 +1096,7 @@ class TestRepair(BaseRepairTest):
         debug("stopping node3")
         node3.stop(gently=False, wait_other_notice=True)
 
-        self.patient_exclusive_cql_connection(node1);
+        self.patient_exclusive_cql_connection(node1)
         debug("inserting data while node3 is down")
         node1.stress(stress_options=['write', 'n=1k',
                                      'no-warmup', 'cl=ONE',
