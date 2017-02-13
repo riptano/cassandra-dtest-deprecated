@@ -2,7 +2,7 @@ import os
 import tempfile
 from itertools import chain
 from shutil import rmtree
-from unittest import skipIf, TestCase
+from unittest import skipIf
 
 from cassandra import ConsistencyLevel, ReadTimeout, Unavailable
 from cassandra.query import SimpleStatement
