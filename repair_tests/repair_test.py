@@ -284,7 +284,14 @@ class TestRepair(BaseRepairTest):
         return [_sstable_data(*a) for a in zip(names, repaired_times)]
 
     @since('2.2.10', '4')
-    def no_anticompaction_of_already_repaired_test(self):
+    def no_anticompaction_of_already_repaired_primary_range_test(self):
+        self._no_anticompaction_of_already_repaired_test(pr=True)
+
+    @since('2.2.10', '4')
+    def no_anticompaction_of_already_repaired_full_range_test(self):
+        self._no_anticompaction_of_already_repaired_test(pr=False)
+
+    def _no_anticompaction_of_already_repaired_test(self, pr):
         """
         * Launch three node cluster and stress with RF2
         * Do incremental repair to have all sstables flagged as repaired
@@ -295,8 +302,8 @@ class TestRepair(BaseRepairTest):
 
         cluster = self.cluster
         debug("Starting cluster..")
-        cluster.populate(3).start(wait_for_binary_proto=True)
-        node1, node2, node3 = cluster.nodelist()
+        cluster.populate(2).start(wait_for_binary_proto=True)
+        node1, node2 = cluster.nodelist()
         # we use RF to make sure to cover only a set of sub-ranges when doing -full -pr
         node1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=2)', '-rate', 'threads=50'])
         # disable compaction to make sure that we won't create any new sstables with repairedAt 0
@@ -311,7 +318,7 @@ class TestRepair(BaseRepairTest):
         node2.stop(wait_other_notice=True)
         node1.stress(stress_options=['write', 'n=40K', 'no-warmup', 'cl=ONE', '-rate', 'threads=50'])
         node2.start(wait_for_binary_proto=True, wait_other_notice=True)
-        node1.nodetool("repair -full -pr keyspace1 standard1")
+        node1.nodetool("repair -full {} keyspace1 standard1".format("-pr" if pr else ""))
 
         meta = self._get_repaired_data(node1, 'keyspace1')
         repairedAfterFull = set([m for m in meta if m.repaired > 0])
