@@ -10,6 +10,7 @@ from decimal import Decimal
 from distutils.version import LooseVersion
 from tempfile import NamedTemporaryFile
 from uuid import UUID, uuid4
+from unittest import skip
 
 from cassandra import InvalidRequest
 from cassandra.concurrent import execute_concurrent_with_args
@@ -1505,6 +1506,7 @@ Tracing session:""")
         # the table created before and after should be the same
         self.assertEqual(reloaded_describe_out, describe_out)
 
+    @skip('no terminal in CI')
     @since('3.0')
     def test_materialized_view(self):
         """
@@ -1565,6 +1567,7 @@ Tracing session:""")
         """
         self._test_clear_screen('CLEAR')
 
+    @skip('no terminal in CI')
     @since('3.0')
     def test_cls(self):
         """
