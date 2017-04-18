@@ -137,6 +137,7 @@ class TestHelper(Tester):
         in a dict keyed by the table or index name.
         """
         self.perform_node_tool_cmd('flush', table, indexes)
+        time.sleep(1)
         return self.get_sstables(table, indexes)
 
     def scrub(self, table, *indexes):
