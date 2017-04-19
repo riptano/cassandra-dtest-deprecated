@@ -400,6 +400,9 @@ class TestBootstrap(BaseBootstrapTest):
         current_rows = list(session.execute("SELECT * FROM %s" % stress_table))
         self.assertEquals(original_rows, current_rows)
 
+    @known_failure(failure_source='test',
+                   jira_url='https://issues.apache.org/jira/browse/CASSANDRA-12419',
+                   flaky=True)
     def local_quorum_bootstrap_test(self):
         """
         Test that CL local_quorum works while a node is bootstrapping.
