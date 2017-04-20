@@ -196,7 +196,13 @@ class TestArchiveCommitlog(SnapshotTester):
                         [(r'^archive_command=.*$', 'archive_command={archive_command} %path {tmp_commitlog}/%name'.format(
                             tmp_commitlog=tmp_commitlog, archive_command=archive_command))])
 
-        cluster.start()
+        cluster.start(wait_for_binary_proto=True)
+        # drain and bounce to get clean CLs. We do this to address
+        # CASSANDRA-11811, where mutations generated on startup get replayed
+        # when we restore from a snapshot
+        cluster.drain()
+        cluster.stop()
+        cluster.start(wait_for_binary_proto=True)
 
         session = self.patient_cql_connection(node1)
         create_ks(session, 'ks', 1)
