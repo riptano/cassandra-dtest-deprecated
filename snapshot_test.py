@@ -122,7 +122,7 @@ class TestSnapshot(SnapshotTester):
         """
         cluster = self.cluster
         cluster.populate(1).start()
-        (node1,) = cluster.nodelist()
+        node1, = cluster.nodelist()
         session = self.patient_cql_connection(node1)
 
         # Create schema and insert some data
