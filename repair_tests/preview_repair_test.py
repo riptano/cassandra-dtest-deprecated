@@ -4,19 +4,22 @@ from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
 from dtest import Tester
+from tools.decorators import no_vnodes
+
 
 class PreviewRepairTest(Tester):
 
-    def assertNoRepairHistory(self, session):
+    def assert_no_repair_history(self, session):
         rows = session.execute("select * from system_distributed.repair_history")
         self.assertEqual(rows.current_rows, [])
         rows = session.execute("select * from system_distributed.parent_repair_history")
         self.assertEqual(rows.current_rows, [])
 
+    @no_vnodes()
     def preview_test(self):
         """ Test that preview correctly detects out of sync data """
         cluster = self.cluster
-        cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'num_tokens': 1, 'commitlog_sync_period_in_ms': 500})
+        cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'commitlog_sync_period_in_ms': 500})
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
 
@@ -27,7 +30,7 @@ class PreviewRepairTest(Tester):
         # everything should be in sync
         result = node1.repair(options=['ks', '--preview'])
         self.assertIn("Previewed data was in sync", result.stdout)
-        self.assertNoRepairHistory(session)
+        self.assert_no_repair_history(session)
 
         # make data inconsistent between nodes
         stmt = SimpleStatement("INSERT INTO ks.tbl (k,v) VALUES (%s, %s)")
@@ -53,16 +56,18 @@ class PreviewRepairTest(Tester):
 
         # data should not be in sync for full and unrepaired previews
         result = node1.repair(options=['ks', '--preview'])
+        self.assertIn("Total estimated streaming", result.stdout)
         self.assertNotIn("Previewed data was in sync", result.stdout)
 
         result = node1.repair(options=['ks', '--preview', '--full'])
+        self.assertIn("Total estimated streaming", result.stdout)
         self.assertNotIn("Previewed data was in sync", result.stdout)
 
         # repaired data should be in sync anyway
         result = node1.repair(options=['ks', '--validate'])
         self.assertIn("Repaired data is in sync", result.stdout)
 
-        self.assertNoRepairHistory(session)
+        self.assert_no_repair_history(session)
 
         # repair the data...
         node1.repair(options=['ks'])
