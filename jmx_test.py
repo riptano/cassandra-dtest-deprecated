@@ -88,6 +88,76 @@ class TestJMX(Tester):
             sstables = jmx.read_attribute(sstable_count, "Value")
             self.assertGreaterEqual(int(sstables), 1)
 
+    @since('3.0')
+    def mv_metric_mbeans_release_test(self):
+        """
+        Test that the right mbeans are created and released when creating mvs
+        """
+        cluster = self.cluster
+        cluster.populate(1)
+        node = cluster.nodelist()[0]
+        remove_perf_disable_shared_mem(node)
+        cluster.start(wait_for_binary_proto=True)
+
+        node.run_cqlsh(cmds="""
+            CREATE KEYSPACE mvtest WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor': 1 };
+            CREATE TABLE mvtest.testtable (
+                foo int,
+                bar text,
+                baz text,
+                PRIMARY KEY (foo, bar)
+            );
+
+            CREATE MATERIALIZED VIEW mvtest.testmv AS
+                SELECT foo, bar, baz FROM mvtest.testtable WHERE
+                foo IS NOT NULL AND bar IS NOT NULL AND baz IS NOT NULL
+            PRIMARY KEY (foo, bar, baz);""")
+
+        table_memtable_size = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testtable',
+                                   name='AllMemtablesHeapSize')
+        table_view_read_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testtable',
+                                         name='ViewReadTime')
+        table_view_lock_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testtable',
+                                      name='ViewLockAcquireTime')
+        mv_memtable_size = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testmv',
+                                      name='AllMemtablesHeapSize')
+        mv_view_read_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testmv',
+                                          name='ViewReadTime')
+        mv_view_lock_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testmv',
+                                          name='ViewLockAcquireTime')
+
+        missing_metric_message = "Table metric %s should have been registered after creating table %s" \
+                                 "but wasn't!"
+
+        with JolokiaAgent(node) as jmx:
+            self.assertIsNotNone(jmx.read_attribute(table_memtable_size, "Value"),
+                                 missing_metric_message.format("AllMemtablesHeapSize", "testtable"))
+            self.assertIsNotNone(jmx.read_attribute(table_view_read_time, "Count"),
+                                 missing_metric_message.format("ViewReadTime", "testtable"))
+            self.assertIsNotNone(jmx.read_attribute(table_view_lock_time, "Count"),
+                                 missing_metric_message.format("ViewLockAcquireTime", "testtable"))
+            self.assertIsNotNone(jmx.read_attribute(mv_memtable_size, "Value"),
+                                 missing_metric_message.format("AllMemtablesHeapSize", "testmv"))
+            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=mv_view_read_time, attribute="Count", verbose=False)
+            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=mv_view_lock_time, attribute="Count", verbose=False)
+
+        node.run_cqlsh(cmds="DROP KEYSPACE mvtest;")
+        with JolokiaAgent(node) as jmx:
+            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=table_memtable_size, attribute="Value", verbose=False)
+            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=table_view_lock_time, attribute="Count", verbose=False)
+            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=table_view_read_time, attribute="Count", verbose=False)
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=mv_memtable_size, attribute="Value", verbose=False)
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=mv_view_lock_time, attribute="Count", verbose=False)
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+                                    mbean=mv_view_read_time, attribute="Count", verbose=False)
+
     def test_compactionstats(self):
         """
         @jira_ticket CASSANDRA-10504
