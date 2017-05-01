@@ -758,6 +758,3 @@ class TestIncRepair(Tester):
         for node in self.cluster.nodelist():
             result = node.repair(options=['ks', '--validate'])
             self.assertIn("Repaired data is in sync", result.stdout)
-
-
-
