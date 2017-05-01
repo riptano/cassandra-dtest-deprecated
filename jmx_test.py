@@ -13,7 +13,6 @@ from tools.misc import generate_ssl_stores
 
 
 class TestJMX(Tester):
-
     def netstats_test(self):
         """
         Check functioning of nodetool netstats, especially with restarts.
@@ -48,7 +47,8 @@ class TestJMX(Tester):
                 if not isinstance(e, ToolError):
                     raise
                 else:
-                    self.assertRegexpMatches(str(e), "ConnectException: 'Connection refused( \(Connection refused\))?'.")
+                    self.assertRegexpMatches(str(e),
+                                             "ConnectException: 'Connection refused( \(Connection refused\))?'.")
 
         self.assertTrue(running, msg='node1 never started')
 
@@ -69,9 +69,12 @@ class TestJMX(Tester):
         debug('Version {} typeName {}'.format(version, typeName))
 
         # TODO the keyspace and table name are capitalized in 2.0
-        memtable_size = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1', name='AllMemtablesHeapSize')
-        disk_size = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1', name='LiveDiskSpaceUsed')
-        sstable_count = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1', name='LiveSSTableCount')
+        memtable_size = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1',
+                                   name='AllMemtablesHeapSize')
+        disk_size = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1',
+                               name='LiveDiskSpaceUsed')
+        sstable_count = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1',
+                                   name='LiveSSTableCount')
 
         with JolokiaAgent(node1) as jmx:
             mem_size = jmx.read_attribute(memtable_size, "Value")
@@ -114,17 +117,17 @@ class TestJMX(Tester):
             PRIMARY KEY (foo, bar, baz);""")
 
         table_memtable_size = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testtable',
-                                   name='AllMemtablesHeapSize')
+                                         name='AllMemtablesHeapSize')
         table_view_read_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testtable',
-                                         name='ViewReadTime')
+                                          name='ViewReadTime')
         table_view_lock_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testtable',
-                                      name='ViewLockAcquireTime')
+                                          name='ViewLockAcquireTime')
         mv_memtable_size = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testmv',
                                       name='AllMemtablesHeapSize')
         mv_view_read_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testmv',
-                                          name='ViewReadTime')
+                                       name='ViewReadTime')
         mv_view_lock_time = make_mbean('metrics', type='Table', keyspace='mvtest', scope='testmv',
-                                          name='ViewLockAcquireTime')
+                                       name='ViewLockAcquireTime')
 
         missing_metric_message = "Table metric %s should have been registered after creating table %s" \
                                  "but wasn't!"
@@ -138,18 +141,18 @@ class TestJMX(Tester):
                                  missing_metric_message.format("ViewLockAcquireTime", "testtable"))
             self.assertIsNotNone(jmx.read_attribute(mv_memtable_size, "Value"),
                                  missing_metric_message.format("AllMemtablesHeapSize", "testmv"))
-            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
-            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
 
         node.run_cqlsh(cmds="DROP KEYSPACE mvtest;")
         with JolokiaAgent(node) as jmx:
-            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_memtable_size, attribute="Value", verbose=False)
-            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_lock_time, attribute="Count", verbose=False)
-            self.assertRaisesRegexp(Exception,".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_read_time, attribute="Count", verbose=False)
             self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_memtable_size, attribute="Value", verbose=False)
@@ -217,7 +220,8 @@ class TestJMX(Tester):
             start = time.time()
             max_query_timeout = 600
             debug("Waiting for compaction to finish:")
-            while (len(jmx.read_attribute(compaction_manager, 'CompactionSummary')) > 0) and (time.time() - start < max_query_timeout):
+            while (len(jmx.read_attribute(compaction_manager, 'CompactionSummary')) > 0) and (
+                    time.time() - start < max_query_timeout):
                 debug(jmx.read_attribute(compaction_manager, 'CompactionSummary'))
                 time.sleep(2)
 
@@ -254,7 +258,6 @@ class TestJMX(Tester):
 
 @since('3.9')
 class TestJMXSSL(Tester):
-
     keystore_password = 'cassandra'
     truststore_password = 'cassandra'
 
@@ -296,8 +299,10 @@ class TestJMXSSL(Tester):
                           .format(ts=self.truststore(), ts_pwd=self.truststore_password))
 
         # when both truststore and a keystore containing the client key are supplied, connection should succeed
-        node.nodetool("info --ssl -Djavax.net.ssl.trustStore={ts} -Djavax.net.ssl.trustStorePassword={ts_pwd} -Djavax.net.ssl.keyStore={ks} -Djavax.net.ssl.keyStorePassword={ks_pwd}"
-                      .format(ts=self.truststore(), ts_pwd=self.truststore_password, ks=self.keystore(), ks_pwd=self.keystore_password))
+        node.nodetool(
+            "info --ssl -Djavax.net.ssl.trustStore={ts} -Djavax.net.ssl.trustStorePassword={ts_pwd} -Djavax.net.ssl.keyStore={ks} -Djavax.net.ssl.keyStorePassword={ks_pwd}"
+            .format(ts=self.truststore(), ts_pwd=self.truststore_password, ks=self.keystore(),
+                    ks_pwd=self.keystore_password))
 
     def assert_insecure_connection_rejected(self, node):
         """
