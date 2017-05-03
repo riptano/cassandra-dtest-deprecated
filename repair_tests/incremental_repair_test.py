@@ -670,7 +670,7 @@ class TestIncRepair(Tester):
         node1.repair(options=['ks'])
 
         for i in range(1000):
-            v = i+1000
+            v = i + 1000
             session.execute(stmt, (v, v))
 
         # everything should be in sync
@@ -706,7 +706,7 @@ class TestIncRepair(Tester):
         node1.repair(options=['ks'])
 
         for i in range(1000):
-            v = i+1000
+            v = i + 1000
             session.execute(stmt, (v, v))
 
         # everything should be in sync
@@ -742,7 +742,7 @@ class TestIncRepair(Tester):
         node1.repair(options=['ks'])
 
         for i in range(1000):
-            v = i+1000
+            v = i + 1000
             session.execute(stmt, (v, v))
 
         # everything should be in sync
