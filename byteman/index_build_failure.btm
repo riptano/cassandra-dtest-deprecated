@@ -1,0 +1,13 @@
+#
+# Sleep 5s during index update
+#
+RULE sleep 5s on index update
+CLASS org.apache.cassandra.index.SecondaryIndexManager
+METHOD buildAllIndexesBlocking
+AT ENTRY
+# set flag to only run this rule once.
+IF NOT flagged("done")
+DO
+   flag("done");
+   throw new java.lang.RuntimeException("Index building failure")
+ENDRULE
