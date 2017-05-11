@@ -6,7 +6,7 @@ from distutils import dir_util
 from ccmlib import common as ccmcommon
 
 from dtest import Tester, debug, create_ks, create_cf
-from tools.assertions import assert_none, assert_one
+from tools.assertions import assert_all, assert_none, assert_one
 
 
 # WARNING: sstableloader tests should be added to TestSSTableGenerationAndLoading (below),
@@ -303,7 +303,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         """
         def create_schema_with_2i(session):
             create_ks(session, 'k', 1)
-            session.execute("CREATE TABLE k.t (k int PRIMARY KEY, v int)")
+            session.execute("CREATE TABLE k.t (p int, c int, v int, PRIMARY KEY(p, c))")
             session.execute("CREATE INDEX idx ON k.t(v)")
 
         cluster = self.cluster
@@ -312,7 +312,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
 
         session = self.patient_cql_connection(node)
         create_schema_with_2i(session)
-        session.execute("INSERT INTO k.t(k, v) VALUES (0, 0)")
+        session.execute("INSERT INTO k.t(p, c, v) VALUES (0, 1, 8)")
 
         # Stop node and copy SSTables
         node.nodetool('drain')
@@ -327,19 +327,23 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         session = self.patient_cql_connection(node)
         create_schema_with_2i(session)
 
-        # The table should exist and be empty
+        # The table should exist and be empty, and the index should be empty and marked as built
         assert_none(session, "SELECT * FROM k.t")
-        assert_none(session, "SELECT * FROM system.indexes_to_rebuild WHERE keyspace_name='k'")
+        assert_none(session, "SELECT * FROM k.t WHERE v = 8")
+        assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
+
+        # Add some additional data before loading the SSTable, to check that it will be still accessible
+        session.execute("INSERT INTO k.t(p, c, v) VALUES (0, 2, 8)")
 
         # Load SSTables with a failure during index creation
         node.byteman_submit(['./byteman/index_build_failure.btm'])
         with self.assertRaises(AssertionError):
             self.load_sstables(cluster, node, 'k')
 
-        # Check that the table data has been loaded but not indexed, and the index is marked to rebuild
-        assert_one(session, "SELECT * FROM k.t", [0, 0])
-        assert_none(session, "SELECT * FROM k.t WHERE v = 0")
-        assert_one(session, "SELECT * FROM system.indexes_to_rebuild WHERE keyspace_name='k'", ['k', 'idx'])
+        # Check that the old SSTable data has been loaded but not indexed and the index isn't marked as built
+        assert_all(session, "SELECT * FROM k.t", [[0, 1, 8], [0, 2, 8]])
+        assert_one(session, "SELECT * FROM k.t WHERE v = 8", [0, 2, 8])
+        assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
 
         # Restart the node to trigger index rebuild
         node.nodetool('drain')
@@ -347,6 +351,6 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         cluster.start()
         session = self.patient_cql_connection(node)
 
-        # Check that the data has been indexed and the index is not marked to rebuild anymore
-        assert_one(session, "SELECT * FROM k.t WHERE v = 0", [0, 0])
-        assert_none(session, "SELECT * FROM system.indexes_to_rebuild WHERE keyspace_name='k'")
+        # Check that the data has been indexed and the index is marked as built
+        assert_all(session, "SELECT * FROM k.t WHERE v = 8", [[0, 1, 8], [0, 2, 8]])
+        assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
