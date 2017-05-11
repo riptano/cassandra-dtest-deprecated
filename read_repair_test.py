@@ -197,6 +197,36 @@ class TestReadRepair(Tester):
             activity = trace_event.description
             self.assertNotIn("Sending READ_REPAIR message", activity)
 
+    # CASSANDRA-10726 todo, I need to choose right version once we merge the java code fix
+    @since('3.0')
+    def test_read_repair_speculative_retry(self):
+        node1, node2, _ = self.cluster.nodelist()
+        session = self.patient_exclusive_cql_connection(node1)
+        session.execute("""CREATE KEYSPACE read_repair_retry
+                                WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};""")
+        session.execute("CREATE TABLE read_repair_retry.t1 (k int PRIMARY KEY, a int, b int);")
+
+        # inject node2 exception in the write path
+        debug("make write path timeout using byteman")
+        node2.stop(wait=True)
+        node2.byteman_port = '8100'
+        node2.import_config_files()
+        node2.start(wait_for_binary_proto=True)
+        node2.byteman_submit(['./byteman/simulate_write_timeout_node2.btm'])
+
+        session.execute(SimpleStatement("INSERT INTO read_repair_retry.t1 (k, a, b) VALUES (1, 1, 1)",
+                                        consistency_level=ConsistencyLevel.LOCAL_QUORUM))
+        debug("do the local quorum read")
+        # read 99 times to make sure it hit node2 to simulate write timeout in read repair case
+        # details see CASSANDRA-10726
+        # before CASSANDRA-10726 fix, it will hit read exception since it failed to read repair node2
+        # after CASSANDRA-10726 fix, all read will succeed
+        for n in range(1,  100):
+            debug("start " + str(n) + "th read")
+            assert_one(session, "SELECT * FROM read_repair_retry.t1 WHERE k=1", [1, 1, 1],
+                       cl=ConsistencyLevel.LOCAL_QUORUM)
+            debug(str(n) + "th read is good")
+
     def pprint_trace(self, trace):
         """Pretty print a trace"""
         if PRINT_DEBUG:

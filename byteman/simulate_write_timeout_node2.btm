@@ -1,0 +1,13 @@
+#
+# Inject write timeout failure
+#
+# timeout in write path
+#
+RULE timeout in write path
+CLASS org.apache.cassandra.db.commitlog.CommitLog
+METHOD add
+AT ENTRY
+IF true
+DO
+   throw new java.lang.RuntimeException("Write Timeout")
+ENDRULE
