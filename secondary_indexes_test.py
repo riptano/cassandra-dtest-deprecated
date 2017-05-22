@@ -21,6 +21,7 @@ from tools.misc import new_node
 
 class TestSecondaryIndexes(Tester):
 
+    @staticmethod
     def _index_sstables_files(node, keyspace, table, index):
         files = []
         for data_dir in node.data_directories():
