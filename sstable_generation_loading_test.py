@@ -328,22 +328,24 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         create_schema_with_2i(session)
 
         # The table should exist and be empty, and the index should be empty and marked as built
+        assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_none(session, "SELECT * FROM k.t")
         assert_none(session, "SELECT * FROM k.t WHERE v = 8")
-        assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
 
         # Add some additional data before loading the SSTable, to check that it will be still accessible
         session.execute("INSERT INTO k.t(p, c, v) VALUES (0, 2, 8)")
+        assert_one(session, "SELECT * FROM k.t", [0, 2, 8])
+        assert_one(session, "SELECT * FROM k.t WHERE v = 8", [0, 2, 8])
 
         # Load SSTables with a failure during index creation
         node.byteman_submit(['./byteman/index_build_failure.btm'])
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(Exception):
             self.load_sstables(cluster, node, 'k')
 
-        # Check that the old SSTable data has been loaded but not indexed and the index isn't marked as built
+        # Check that the index isn't marked as built and the old SSTable data has been loaded but not indexed
+        assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
         assert_all(session, "SELECT * FROM k.t", [[0, 1, 8], [0, 2, 8]])
         assert_one(session, "SELECT * FROM k.t WHERE v = 8", [0, 2, 8])
-        assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
 
         # Restart the node to trigger index rebuild
         node.nodetool('drain')
@@ -351,6 +353,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         cluster.start()
         session = self.patient_cql_connection(node)
 
-        # Check that the data has been indexed and the index is marked as built
-        assert_all(session, "SELECT * FROM k.t WHERE v = 8", [[0, 1, 8], [0, 2, 8]])
+        # Check that the index is marked as built and the index has been rebuilt
         assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
+        assert_all(session, "SELECT * FROM k.t", [[0, 1, 8], [0, 2, 8]])
+        assert_all(session, "SELECT * FROM k.t WHERE v = 8", [[0, 1, 8], [0, 2, 8]])
