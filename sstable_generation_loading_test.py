@@ -7,6 +7,7 @@ from ccmlib import common as ccmcommon
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_all, assert_none, assert_one
+from tools.decorators import since
 
 
 # WARNING: sstableloader tests should be added to TestSSTableGenerationAndLoading (below),
@@ -294,6 +295,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
 
         self.load_sstable_with_configuration(ks='"Keyspace1"', create_schema=create_schema_with_mv)
 
+    @since('4.0')
     def sstableloader_with_failing_2i_test(self):
         """
         @jira_ticket CASSANDRA-10130

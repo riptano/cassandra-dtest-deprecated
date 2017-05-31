@@ -336,7 +336,7 @@ class TestSecondaryIndexes(Tester):
         # verify that only the expected row is present in the build indexes table
         self.assertEqual(1, len(list(session.execute("""SELECT * FROM system."IndexInfo";"""))))
 
-    @since('3.0')
+    @since('4.0')
     def test_failing_manual_rebuild_index(self):
         """
         @jira_ticket CASSANDRA-10130
@@ -396,7 +396,7 @@ class TestSecondaryIndexes(Tester):
         assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
-    @since('3.0')
+    @since('4.0')
     def test_drop_index_while_building(self):
         """
         asserts that indexes deleted before they have been completely build are invalidated and not built after restart
@@ -434,7 +434,7 @@ class TestSecondaryIndexes(Tester):
                        'SELECT * FROM standard1 WHERE "C0" = 0x00',
                        'Cannot execute this query as it might involve data filtering')
 
-    @since('3.0')
+    @since('4.0')
     def test_index_is_not_always_rebuilt_at_start(self):
         """
         @jira_ticket CASSANDRA-10130
