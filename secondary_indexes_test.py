@@ -371,17 +371,6 @@ class TestSecondaryIndexes(Tester):
         assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
-        # Successfully rebuild the index
-        before_files = after_files
-        node.nodetool("rebuild_index k t idx")
-        cluster.wait_for_compactions()
-        after_files = self._index_sstables_files(node, 'k', 't', 'idx')
-
-        # Verify that the index is rebuilt, still not marked as built, and it can answer queries
-        self.assertNotEqual(before_files, after_files)
-        assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
-        assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
-
         # Restart the node to trigger the scheduled index rebuild
         before_files = after_files
         node.nodetool('drain')
@@ -392,6 +381,29 @@ class TestSecondaryIndexes(Tester):
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
 
         # Verify that, the index is rebuilt, marked as built, and it can answer queries
+        self.assertNotEqual(before_files, after_files)
+        assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
+        assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
+
+        # Simulate another failing index rebuild
+        before_files = self._index_sstables_files(node, 'k', 't', 'idx')
+        node.byteman_submit(['./byteman/index_build_failure.btm'])
+        with self.assertRaises(Exception):
+            node.nodetool("rebuild_index k t idx")
+        after_files = self._index_sstables_files(node, 'k', 't', 'idx')
+
+        # Verify that the index is not rebuilt, not marked as built, and it still can answer queries
+        self.assertEqual(before_files, after_files)
+        assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
+        assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
+
+        # Successfully rebuild the index
+        before_files = after_files
+        node.nodetool("rebuild_index k t idx")
+        cluster.wait_for_compactions()
+        after_files = self._index_sstables_files(node, 'k', 't', 'idx')
+
+        # Verify that the index is rebuilt, marked as built, and it can answer queries
         self.assertNotEqual(before_files, after_files)
         assert_one(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
