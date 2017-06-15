@@ -1068,28 +1068,6 @@ class ReusableClusterTester(Tester):
         init_default_config(cls.cluster, cls.cluster_options)
 
 
-def canReuseCluster(Tester):
-    orig_init = Tester.__init__
-    # make copy of original __init__, so we can call it without recursion
-
-    def __init__(self, *args, **kwargs):
-        orig_init(self, *args, **kwargs)  # call the original __init__
-
-    Tester.__init__ = __init__  # set the class' __init__ to the new one
-    return Tester
-
-
-class freshCluster():
-
-    def __call__(self, f):
-        def wrapped(obj):
-            obj.setUp()
-            f(obj)
-        wrapped.__name__ = f.__name__
-        wrapped.__doc__ = f.__doc__
-        return wrapped
-
-
 class MultiError(Exception):
     """
     Extends Exception to provide reporting multiple exceptions at once.
