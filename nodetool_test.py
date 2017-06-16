@@ -4,6 +4,7 @@ from ccmlib.node import ToolError
 
 from dtest import Tester, debug
 from tools.decorators import since
+from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 
 class TestNodetool(Tester):
@@ -136,3 +137,32 @@ class TestNodetool(Tester):
         out, err, _ = node.nodetool('status')
         self.assertEqual(0, len(err), err)
         self.assertRegexpMatches(out, notice_message)
+
+    @since('4.0')
+    def test_set_batchlog_replay_throttle(self):
+        """
+        @jira_ticket CASSANDRA-13614
+
+        Test that nodetool can set the batchlog replay throttle
+        """
+        cluster = self.cluster
+        cluster.populate(1)
+        node = cluster.nodelist()[0]
+        remove_perf_disable_shared_mem(node)
+        cluster.start()
+
+        with JolokiaAgent(node) as jmx:
+            mbean = make_mbean('db', 'StorageService')
+
+            # Set throttle with nodetool and check with JMX
+            node.nodetool('setbatchlogreplaythrottlekb 2048')
+            self.assertEqual(2048, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
+
+            # Set throttle with JMX and check with JMX
+            jmx.write_attribute(mbean, 'BatchlogReplayThrottleInKB', 4096)
+            self.assertEqual(4096, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
+
+        # Test that nodetool help message is displayed
+        help = node.nodetool('help setbatchlogreplaythrottlekb')
+        self.assertTrue('Set batchlog replay throttle' in help.stdout)
+
