@@ -2973,7 +2973,6 @@ class CqlshCopyTest(Tester):
         _test(True)
         _test(False)
 
-
     @since('2.2')
     def test_round_trip_with_authentication(self):
         """
