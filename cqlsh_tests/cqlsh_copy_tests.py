@@ -53,6 +53,7 @@ class UTC(datetime.tzinfo):
     def dst(self, dt):
         return datetime.timedelta(0)
 
+
 class CqlshCopyTest(Tester):
     """
     Tests the COPY TO and COPY FROM features in cqlsh.
@@ -2356,23 +2357,17 @@ class CqlshCopyTest(Tester):
         new_results = list(self.session.execute("SELECT * FROM testcopyto"))
         self.assertEqual(results, new_results)
 
-
-
     def test_round_trip_murmur3(self):
         self._test_round_trip(nodes=3, partitioner="murmur3")
-
 
     def test_round_trip_random(self):
         self._test_round_trip(nodes=3, partitioner="random")
 
-
     def test_round_trip_order_preserving(self):
         self._test_round_trip(nodes=3, partitioner="order")
 
-
     def test_round_trip_byte_ordered(self):
         self._test_round_trip(nodes=3, partitioner="byte")
-
 
     def test_source_copy_round_trip(self):
         """
@@ -2521,7 +2516,6 @@ class CqlshCopyTest(Tester):
 
         return ret
 
-
     def test_bulk_round_trip_default(self):
         """
         Test bulk import with default stress import (one row per operation)
@@ -2540,7 +2534,6 @@ class CqlshCopyTest(Tester):
         self._test_bulk_round_trip(nodes=3, partitioner="murmur3", num_operations=100000,
                                    copy_from_options={'PREPAREDSTATEMENTS': False})
 
-
     def test_bulk_round_trip_blogposts(self):
         """
         Test bulk import with a user profile that inserts 10 rows per operation and has a replication factor 3
@@ -2551,7 +2544,6 @@ class CqlshCopyTest(Tester):
                                    configuration_options={'batch_size_warn_threshold_in_kb': '10'},
                                    profile=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'blogposts.yaml'),
                                    stress_table='stresscql.blogposts')
-
 
     def test_bulk_round_trip_blogposts_with_max_connections(self):
         """
@@ -2570,7 +2562,6 @@ class CqlshCopyTest(Tester):
                                    copy_to_options={'NUMPROCESSES': 5, 'MAXATTEMPTS': 20},
                                    copy_from_options={'NUMPROCESSES': 2})
 
-
     def test_bulk_round_trip_with_timeouts(self):
         """
         Test bulk import with very short read and write timeout values, this should exercise the
@@ -2585,7 +2576,6 @@ class CqlshCopyTest(Tester):
                                    copy_from_options={'MAXINSERTERRORS': -1},
                                    skip_count_checks=True)
 
-
     def test_bulk_round_trip_with_low_ingestrate(self):
         """
         Test bulk import with default stress import (one row per operation) and a low
@@ -2595,7 +2585,6 @@ class CqlshCopyTest(Tester):
         """
         self._test_bulk_round_trip(nodes=3, partitioner="murmur3", num_operations=10000,
                                    copy_from_options={'INGESTRATE': 1500})
-
 
     def test_bulk_round_trip_with_single_core(self):
         """
@@ -2611,7 +2600,6 @@ class CqlshCopyTest(Tester):
             debug('Checking that number of cores detected is correct')
             for out in ret:
                 self.assertIn("Detected 1 core", out[0])
-
 
     @since('3.0.5')
     def test_bulk_round_trip_with_backoff(self):
@@ -2653,7 +2641,6 @@ class CqlshCopyTest(Tester):
         debug("Using failure range: {}, {}".format(start, end))
         return start, end
 
-
     def test_copy_to_with_more_failures_than_max_attempts(self):
         """
         Test exporting rows with failure injection by setting the environment variable CQLSH_COPY_TEST_FAILURES,
@@ -2684,7 +2671,6 @@ class CqlshCopyTest(Tester):
         self.assertIn('some records might be missing', err)
         self.assertTrue(len(open(tempfile.name).readlines()) < num_records)
 
-
     def test_copy_to_with_fewer_failures_than_max_attempts(self):
         """
         Test exporting rows with failure injection by setting the environment variable CQLSH_COPY_TEST_FAILURES,
@@ -2714,7 +2700,6 @@ class CqlshCopyTest(Tester):
         self.assertNotIn('some records might be missing', err)
         self.assertEqual(num_records, len(open(tempfile.name).readlines()))
 
-
     def test_copy_to_with_child_process_crashing(self):
         """
         Test exporting rows with failure injection by setting the environment variable CQLSH_COPY_TEST_FAILURES,
@@ -2743,7 +2728,6 @@ class CqlshCopyTest(Tester):
 
         self.assertIn('some records might be missing', err)
         self.assertTrue(len(open(tempfile.name).readlines()) < num_records)
-
 
     def test_copy_from_with_more_failures_than_max_attempts(self):
         """
@@ -2780,7 +2764,6 @@ class CqlshCopyTest(Tester):
         self.assertIn('Failed to process', err)
         num_records_imported = rows_to_list(self.session.execute("SELECT COUNT(*) FROM {}".format(stress_table)))[0][0]
         self.assertTrue(num_records_imported < num_records)
-
 
     def test_copy_from_with_fewer_failures_than_max_attempts(self):
         """
@@ -2820,7 +2803,6 @@ class CqlshCopyTest(Tester):
         self.assertNotIn('Failed to process', err)
         num_records_imported = rows_to_list(self.session.execute("SELECT COUNT(*) FROM {}".format(stress_table)))[0][0]
         self.assertEquals(num_records, num_records_imported)
-
 
     def test_copy_from_with_child_process_crashing(self):
         """

@@ -297,7 +297,6 @@ class TestCQL(UpgradeTester):
                 [24, 'Something something', 'Frodo Baggins'],
                 [30, 'Yet one more message', None]])
 
-
     def limit_ranges_test(self):
         """ Validate LIMIT option for 'range queries' in SELECT statements """
         cursor = self.prepare(ordered=True)
@@ -1125,7 +1124,6 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, "SELECT * FROM users WHERE KEY='user1'", [])
 
-
     def undefined_column_handling_test(self):
         cursor = self.prepare(ordered=True)
 
@@ -1148,7 +1146,6 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT v2 FROM test", [[0], [None], [2]])
 
             assert_all(cursor, "SELECT v2 FROM test WHERE k = 1", [[None]])
-
 
     def range_tombstones_test(self):
         """ Test deletion by 'composite prefix' (range tombstones) """
@@ -1654,7 +1651,6 @@ class TestCQL(UpgradeTester):
             cursor.execute("INSERT INTO test (k, c) VALUES (2, 2)")
             assert_one(cursor, "SELECT * FROM test", [2, 2, None, None])
 
-
     def only_pk_test(self):
         """
         Check table with only a PK (part of #4361)
@@ -1731,7 +1727,6 @@ class TestCQL(UpgradeTester):
             cursor.execute("INSERT INTO test (k, t) VALUES (0, '2011-02-03')")
             assert_invalid(cursor, "INSERT INTO test (k, t) VALUES (0, '2011-42-42')")
 
-
     def range_slice_test(self):
         """
         Test a regression from #1337
@@ -1755,7 +1750,6 @@ class TestCQL(UpgradeTester):
             cursor.execute("INSERT INTO test (k, v) VALUES ('bar', 1)")
 
             assert_row_count(cursor, 'test', 2)
-
 
     def composite_index_with_pk_test(self):
 
@@ -1819,7 +1813,6 @@ class TestCQL(UpgradeTester):
                 assert_invalid(cursor, "SELECT blog_id, content FROM blogs WHERE time1 = 1 AND time2 = 0 AND author='foo'")
                 assert_invalid(cursor, "SELECT content FROM blogs WHERE time1 = 1 AND time2 = 1 AND author='foo'")
                 assert_invalid(cursor, "SELECT content FROM blogs WHERE time1 = 1 AND time2 > 0 AND author='foo'")
-
 
     def limit_bugs_test(self):
         """
@@ -1910,7 +1903,6 @@ class TestCQL(UpgradeTester):
 
             assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime>=12345679 AND key='key3' AND ctime<=12345680 LIMIT 3;")
             assert_invalid(cursor, "SELECT * FROM compositetest WHERE ctime=12345679  AND key='key3' AND ctime<=12345680 LIMIT 3;")
-
 
     def order_by_multikey_test(self):
         """
@@ -2343,7 +2335,6 @@ class TestCQL(UpgradeTester):
 
             assert_one(cursor, "SELECT l1, l2 FROM test WHERE k = 0", [[1, 24, 3], [4, 42, 6]])
 
-
     def composite_index_collections_test(self):
         cursor = self.prepare(ordered=True)
         cursor.execute("""
@@ -2371,7 +2362,6 @@ class TestCQL(UpgradeTester):
 
             query = "SELECT blog_id, content FROM blogs WHERE author='foo'"
             assert_all(cursor, query, [[1, set(['bar1', 'bar2'])], [1, set(['bar2', 'bar3'])], [2, set(['baz'])]])
-
 
     def truncate_clean_cache_test(self):
         cursor = self.prepare(ordered=True, use_cache=True)
@@ -3195,7 +3185,6 @@ class TestCQL(UpgradeTester):
                 assert_invalid(cursor, "DELETE FROM test2 WHERE k = 0 AND i > 0 IF EXISTS")
                 assert_invalid(cursor, "DELETE FROM test2 WHERE k = 0 AND i > 0 IF v = 'foo'")
 
-
     def range_key_ordered_test(self):
         cursor = self.prepare(ordered=True)
 
@@ -3429,7 +3418,6 @@ class TestCQL(UpgradeTester):
 
             cursor.execute("INSERT INTO test(k) VALUES (0)")
             assert_one(cursor, "SELECT dateOf(t) FROM test WHERE k=0", [None])
-
 
     def cas_simple_test(self):
         # cursor = self.prepare(nodes=3, rf=3)
