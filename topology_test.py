@@ -350,7 +350,6 @@ class TestTopology(Tester):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     @since('3.0')
-    @no_vnodes()
     def decommissioned_node_cant_rejoin_test(self):
         '''
         @jira_ticket CASSANDRA-8801
@@ -374,7 +373,7 @@ class TestTopology(Tester):
         node1, node2, node3 = self.cluster.nodelist()
 
         debug('decommissioning...')
-        node3.decommission()
+        node3.decommission(force=self.cluster.version() >= '4.0')
         debug('stopping...')
         node3.stop()
         debug('attempting restart...')
