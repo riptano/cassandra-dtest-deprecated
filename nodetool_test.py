@@ -146,7 +146,7 @@ class TestNodetool(Tester):
         Test that nodetool can set the batchlog replay throttle
         """
         cluster = self.cluster
-        cluster.populate(1)
+        cluster.populate(2)
         node = cluster.nodelist()[0]
         remove_perf_disable_shared_mem(node)
         cluster.start()
@@ -157,10 +157,14 @@ class TestNodetool(Tester):
             # Set throttle with nodetool and check with JMX
             node.nodetool('setbatchlogreplaythrottlekb 2048')
             self.assertEqual(2048, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
+            self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint',
+                                              filename='debug.log')) > 0)
 
             # Set throttle with JMX and check with JMX
             jmx.write_attribute(mbean, 'BatchlogReplayThrottleInKB', 4096)
             self.assertEqual(4096, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
+            self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 4096 KB/s, 2048 KB/s per endpoint',
+                                              filename='debug.log')) > 0)
 
         # Test that nodetool help message is displayed
         help = node.nodetool('help setbatchlogreplaythrottlekb')
