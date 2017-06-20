@@ -3,12 +3,13 @@ from tools.assertions import assert_all
 from tools.decorators import since
 
 
-"""
-Test 30 protocol compatibility flag
-
-@jira CASSANDRA-13004
-"""
 class CompatibilityFlagTest(Tester):
+    """
+    Test 30 protocol compatibility flag
+
+    @jira CASSANDRA-13004
+    """
+
     def _compatibility_flag_off_with_30_node_test(self, from_version):
         """
         Test compatibility with 30 protocol version: if the flag is unset, schema agreement can not be reached
@@ -51,7 +52,6 @@ class CompatibilityFlagTest(Tester):
         session = self.patient_cql_connection(node1)
         self._run_test(session)
 
-
     def _compatibility_flag_on_3014_test(self):
         """
         Test compatibility between post-13004 nodes, one of which is in compatibility mode
@@ -66,7 +66,6 @@ class CompatibilityFlagTest(Tester):
 
         session = self.patient_cql_connection(node1)
         self._run_test(session)
-
 
     def _compatibility_flag_off_3014_test(self):
         """
@@ -89,7 +88,7 @@ class CompatibilityFlagTest(Tester):
         session.execute("CREATE KEYSPACE test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '2'} ;")
         session.execute("CREATE TABLE test.test (a text PRIMARY KEY, b text, c text);")
 
-        for i in range(1,6):
+        for i in range(1, 6):
             session.execute("INSERT INTO test.test (a, b, c) VALUES ('{}', '{}', '{}');".format(i, i + 1, i + 2))
 
         assert_all(session,
