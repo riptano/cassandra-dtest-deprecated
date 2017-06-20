@@ -139,34 +139,25 @@ class TestNodetool(Tester):
         self.assertRegexpMatches(out, notice_message)
 
     @since('4.0')
-    def test_set_batchlog_replay_throttle(self):
+    def test_set_get_batchlog_replay_throttle(self):
         """
         @jira_ticket CASSANDRA-13614
 
-        Test that nodetool can set the batchlog replay throttle
+        Test that batchlog replay throttle can be set and get through nodetool
         """
+
         cluster = self.cluster
         cluster.populate(2)
         node = cluster.nodelist()[0]
-        remove_perf_disable_shared_mem(node)
         cluster.start()
 
-        with JolokiaAgent(node) as jmx:
-            mbean = make_mbean('db', 'StorageService')
+        # Test that nodetool help messages are displayed
+        self.assertTrue('Set batchlog replay throttle' in node.nodetool('help setbatchlogreplaythrottlekb').stdout)
+        self.assertTrue('Print batchlog replay throttle' in node.nodetool('help getbatchlogreplaythrottlekb').stdout)
 
-            # Set throttle with nodetool and check with JMX
-            node.nodetool('setbatchlogreplaythrottlekb 2048')
-            self.assertEqual(2048, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
-            self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint',
-                                              filename='debug.log')) > 0)
-
-            # Set throttle with JMX and check with JMX
-            jmx.write_attribute(mbean, 'BatchlogReplayThrottleInKB', 4096)
-            self.assertEqual(4096, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
-            self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 4096 KB/s, 2048 KB/s per endpoint',
-                                              filename='debug.log')) > 0)
-
-        # Test that nodetool help message is displayed
-        help = node.nodetool('help setbatchlogreplaythrottlekb')
-        self.assertTrue('Set batchlog replay throttle' in help.stdout)
+        # Set and get throttle with nodetool, ensuring that the rate change is logged
+        node.nodetool('setbatchlogreplaythrottlekb 2048')
+        self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint',
+                                          filename='debug.log')) > 0)
+        self.assertTrue('Batchlog replay throttle: 2048 KB/s' in node.nodetool('getbatchlogreplaythrottlekb').stdout)
 
