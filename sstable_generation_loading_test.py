@@ -299,9 +299,9 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
     def sstableloader_with_failing_2i_test(self):
         """
         @jira_ticket CASSANDRA-10130
-        
-        Simulates an index building failure during SSTables load. 
-        The table data should be loaded and the index should be marked for rebuilding during the next node start. 
+
+        Simulates an index building failure during SSTables load.
+        The table data should be loaded and the index should be marked for rebuilding during the next node start.
         """
         def create_schema_with_2i(session):
             create_ks(session, 'k', 1)

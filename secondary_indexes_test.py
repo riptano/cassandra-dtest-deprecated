@@ -340,7 +340,7 @@ class TestSecondaryIndexes(Tester):
     def test_failing_manual_rebuild_index(self):
         """
         @jira_ticket CASSANDRA-10130
-        
+
         Tests the management of index status during manual index rebuilding failures.
         """
 
@@ -450,7 +450,7 @@ class TestSecondaryIndexes(Tester):
     def test_index_is_not_always_rebuilt_at_start(self):
         """
         @jira_ticket CASSANDRA-10130
-        
+
         Tests the management of index status during manual index rebuilding failures.
         """
 
