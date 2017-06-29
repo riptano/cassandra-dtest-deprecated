@@ -188,7 +188,6 @@ class TestJMX(Tester):
 
         Test that batchlog replay throttle can be set and get through JMX
         """
-
         cluster = self.cluster
         cluster.populate(2)
         node = cluster.nodelist()[0]
@@ -202,6 +201,7 @@ class TestJMX(Tester):
             self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 4096 KB/s, 2048 KB/s per endpoint',
                                               filename='debug.log')) > 0)
             self.assertEqual(4096, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
+
 
 @since('3.9')
 class TestJMXSSL(Tester):
