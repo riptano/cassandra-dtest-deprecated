@@ -820,7 +820,8 @@ class TestMaterializedViews(Tester):
 
         # Rename a column with an injected byteman rule to kill the node after the first schema update
         self.allow_log_errors = True
-        node.byteman_submit(['./byteman/merge_schema_failure.btm'])
+        script_version = '4x' if self.cluster.version() >= '4' else '3x'
+        node.byteman_submit(['./byteman/merge_schema_failure_{}.btm'.format(script_version)])
         with self.assertRaises(NoHostAvailable):
             session.execute("ALTER TABLE users RENAME username TO user")
 
