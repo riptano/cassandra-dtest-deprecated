@@ -158,4 +158,3 @@ class TestNodetool(Tester):
         self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint',
                                           filename='debug.log')) > 0)
         self.assertTrue('Batchlog replay throttle: 2048 KB/s' in node.nodetool('getbatchlogreplaythrottle').stdout)
-
