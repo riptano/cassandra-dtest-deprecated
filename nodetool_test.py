@@ -4,7 +4,6 @@ from ccmlib.node import ToolError
 
 from dtest import Tester, debug
 from tools.decorators import since
-from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 
 class TestNodetool(Tester):
