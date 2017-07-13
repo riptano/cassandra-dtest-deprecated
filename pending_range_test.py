@@ -67,3 +67,65 @@ class TestPendingRangeMovements(Tester):
         # Check we can still execute LWT
         for i in xrange(1000):
             session.execute(lwt_query)
+
+
+class TestNonRedundantRangeCalculation(Tester):
+
+    def non_redundant_calculation_test(self):
+        """
+        @jira_ticket CASSANDRA-12281
+        """
+        cluster = self.cluster
+        # If we are on 2.1, we need to set the log level to debug or higher, as debug.log does not exist.
+        if cluster.version() < '2.2' and not TRACE:
+            cluster.set_log_level('DEBUG')
+
+        cluster.populate(3).start(wait_for_binary_proto=True)
+        node1, node2, _ = cluster.nodelist()
+
+        # set up multiple keyspaces with matching configuration
+        session = self.patient_cql_connection(node1)
+
+        kss1 = {'ks1', 'ks2', 'ks3'}
+        for ks in kss1:
+            create_ks(session, ks, 2)
+
+        kss2 = {'ks4', 'ks5'}
+        for ks in kss2:
+            create_ks(session, ks, 3)
+
+        kss3 = {'ks6'}
+        for ks in kss3:
+            create_ks(session, ks, 1)
+
+        kss4 = {'ks7', 'ks8'}
+        for ks in kss4:
+            create_ks(session, ks, {'dc1': 1, 'dc2': 2})
+
+        # decommission node2 to trigger range calculation
+        node2.decommission()
+        node2.stop(wait_other_notice=True)
+
+        # check if keyspaces have been grouped for calculation as expected
+        kss1Found = False
+        kss2Found = False
+        kss3Found = False
+        kss4Found = False
+
+        rs = 'Starting pending range calculation for \\[([^]]+)\\]'
+        if cluster.version() >= '2.2':
+            matches = node1.grep_log(rs, filename='debug.log')
+        else:
+            matches = node1.grep_log(rs, filename='system.log')
+
+        self.assertTrue(matches and len(matches) > 0)
+        for _, m in matches:
+            nodes = [s.strip() for s in m.group(1).split(',')]
+            debug("Nodes grouped for pending range calculation: {}".format(nodes))
+
+            kss1Found = kss1Found or kss1.issubset(nodes) and not (kss2.union(kss3.union(kss4))).intersection(nodes)
+            kss2Found = kss2Found or kss2.issubset(nodes) and not (kss1.union(kss3.union(kss4))).intersection(nodes)
+            kss3Found = kss3Found or kss3.issubset(nodes) and not (kss1.union(kss2.union(kss4))).intersection(nodes)
+            kss4Found = kss4Found or kss4.issubset(nodes) and not (kss1.union(kss2.union(kss3))).intersection(nodes)
+
+        self.assertTrue(kss1Found and kss2Found and kss3Found and kss4Found)
