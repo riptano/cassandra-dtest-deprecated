@@ -117,19 +117,19 @@ custom_2 = VersionMeta(name='custom_branch_2', family='2.2.x', variant='indev', 
 custom_3 = VersionMeta(name='custom_branch_3', family='3.0.x', variant='indev', version='git:cassandra-3.5', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 custom_4 = VersionMeta(name='custom_branch_4', family='3.x', variant='indev', version='git:cassandra-3.6', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 
+local_3_0 = VersionMeta(name='local_3_0', family='3.0.x', variant='indev', version='local:/Users/oleksandrpetrov/foss/java/cassandra:12373-3.0', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 patched_3_0 = VersionMeta(name='patched_3_0', family='3.0.x', variant='indev', version='github:ifesdjeen/12373-3.0', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 patched_3_11 = VersionMeta(name='patched_3_11', family='3.x', variant='indev', version='github:ifesdjeen/12373-3.11', min_proto_v=3, max_proto_v=4, java_versions=(7, 8))
 
 OVERRIDE_MANIFEST = {
+    # indev_2_1_x: [local_3_0],
+    # indev_2_1_x: [patched_3_0, patched_3_11],
+    # current_2_1_x: [patched_3_0, patched_3_11],
+    # current_2_1_x: [patched_3_0, patched_3_11],
+
+    # indev_2_1_x: [patched_3_0],
     indev_2_1_x: [patched_3_0],
     current_2_1_x: [patched_3_0],
-
-    indev_2_1_x: [patched_3_11],
-    current_2_1_x: [patched_3_11],
-
-    indev_3_0_x: [patched_3_11],
-    patched_3_0: [indev_trunk],
-    patched_3_11: [indev_trunk]
 
     # EXAMPLE:
     # custom_1: [custom_2, custom_3],  # creates a test of custom_1 -> custom_2, and another test from custom_1 -> custom_3

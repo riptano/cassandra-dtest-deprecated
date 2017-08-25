@@ -27,9 +27,8 @@ class TestThrift(UpgradeTester):
     @jira_ticket CASSANDRA-12373
     """
     def dense_supercolumn_test(self):
-        cursor = self.prepare()
+        cursor = self.prepare(nodes=2, rf=2, row_factory=dict_factory)
         cluster = self.cluster
-        node1 = cluster.nodelist()[0]
 
         node = self.cluster.nodelist()[0]
         host, port = node.network_interfaces['thrift']
@@ -48,16 +47,15 @@ class TestThrift(UpgradeTester):
         self._validate_dense_cql(cursor)
         self._validate_dense_thrift(client)
 
-        for is_upgraded, cursor in self.do_upgrade(cursor, use_thrift=True):
+        for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             self._validate_dense_cql(cursor)
             self._validate_dense_thrift(client)
 
     def dense_supercolumn_test_with_renames(self):
-        cursor = self.prepare()
+        cursor = self.prepare(row_factory=dict_factory)
         cluster = self.cluster
-        node1 = cluster.nodelist()[0]
 
         node = self.cluster.nodelist()[0]
         host, port = node.network_interfaces['thrift']
@@ -81,16 +79,15 @@ class TestThrift(UpgradeTester):
         self._validate_dense_cql(cursor, cf='dense_super_2', key=u'renamed_key', column1=u'renamed_column1', column2=u'renamed_column2', value=u'renamed_value')
         self._validate_dense_thrift(client, cf='dense_super_2')
 
-        for is_upgraded, cursor in self.do_upgrade(cursor, use_thrift=True):
+        for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             self._validate_dense_cql(cursor, cf='dense_super_2', key=u'renamed_key', column1=u'renamed_column1', column2=u'renamed_column2', value=u'renamed_value')
             self._validate_dense_thrift(client, cf='dense_super_2')
 
     def _validate_dense_cql(self, cursor, cf='dense_super_1', key=u'key', column1=u'column1', column2=u'column2', value=u'value'):
-        cursor.row_factory = dict_factory
         cursor.execute('use ks')
-        print(list(cursor.execute("SELECT * FROM {}".format(cf))))
+        # print(list(cursor.execute("SELECT * FROM {}".format(cf))))
 
         assert_equal(list(cursor.execute("SELECT * FROM {}".format(cf))),
                      [{ key: 'k1', column1: 'key1', column2: 100, value: 'value1'},
@@ -113,9 +110,8 @@ class TestThrift(UpgradeTester):
             assert cosc.super_column.columns[0].value == 'value1'
 
     def sparse_supercolumn_test_with_renames(self):
-        cursor = self.prepare()
+        cursor = self.prepare(row_factory=dict_factory)
         cluster = self.cluster
-        node1 = cluster.nodelist()[0]
 
         node = self.cluster.nodelist()[0]
         host, port = node.network_interfaces['thrift']
@@ -144,16 +140,15 @@ class TestThrift(UpgradeTester):
         self._validate_sparse_thrift(client)
         self._validate_sparse_cql(cursor, column1=u'renamed_column1', key=u'renamed_key')
 
-        for is_upgraded, cursor in self.do_upgrade(cursor, use_thrift=True):
+        for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             self._validate_sparse_cql(cursor, column1=u'renamed_column1', key=u'renamed_key')
             self._validate_sparse_thrift(client)
 
     def supercolumn_test(self):
-        cursor = self.prepare()
+        cursor = self.prepare(row_factory=dict_factory)
         cluster = self.cluster
-        node1 = cluster.nodelist()[0]
 
         node = self.cluster.nodelist()[0]
         host, port = node.network_interfaces['thrift']
@@ -179,14 +174,13 @@ class TestThrift(UpgradeTester):
         self._validate_sparse_thrift(client, cf='sparse_super_2')
         self._validate_sparse_cql(cursor, cf='sparse_super_2')
 
-        for is_upgraded, cursor in self.do_upgrade(cursor, use_thrift=True):
+        for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             self._validate_sparse_thrift(client, cf='sparse_super_2')
             self._validate_sparse_cql(cursor, cf='sparse_super_2')
 
     def _validate_sparse_cql(self, cursor, cf='sparse_super_1', column1=u'column1', col1=u'col1', col2=u'col2', key='key'):
-        cursor.row_factory = dict_factory
         cursor.execute('use ks')
 
         assert_equal(list(cursor.execute("SELECT * FROM {}".format(cf))),
