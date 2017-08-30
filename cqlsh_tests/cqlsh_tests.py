@@ -913,6 +913,9 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             return ret + "\n" + col_idx_def
 
     def get_users_table_output(self):
+        quoted_index_output = self.get_index_output('"QuotedNameIndex"', 'test', 'users', 'firstname')
+        myindex_output = self.get_index_output('myindex', 'test', 'users', 'age')
+
         if self.cluster.version() >= LooseVersion('3.9'):
             return """
         CREATE TABLE test.users (
@@ -934,8 +937,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             AND min_index_interval = 128
             AND read_repair_chance = 0.0
             AND speculative_retry = '99PERCENTILE';
-        """ + self.get_index_output('"QuotedNameIndex"', 'test', 'users', 'firstname') \
-                   + "\n" + self.get_index_output('myindex', 'test', 'users', 'age')
+        """ + quoted_index_output + "\n" + myindex_output
         elif self.cluster.version() >= LooseVersion('3.0'):
             return """
         CREATE TABLE test.users (
@@ -957,8 +959,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             AND min_index_interval = 128
             AND read_repair_chance = 0.0
             AND speculative_retry = '99PERCENTILE';
-        """ + self.get_index_output('"QuotedNameIndex"', 'test', 'users', 'firstname') \
-                   + "\n" + self.get_index_output('myindex', 'test', 'users', 'age')
+        """ + quoted_index_output + "\n" + myindex_output
         else:
             return """
         CREATE TABLE test.users (
@@ -979,8 +980,8 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
             AND min_index_interval = 128
             AND read_repair_chance = 0.0
             AND speculative_retry = '99.0PERCENTILE';
-        """ + self.get_index_output('QuotedNameIndex', 'test', 'users', 'firstname') \
-                   + "\n" + self.get_index_output('myindex', 'test', 'users', 'age')
+        """ + (quoted_index_output + "\n" + myindex_output if self.cluster.version() >= LooseVersion('2.2') else
+               myindex_output + "\n" + quoted_index_output)
 
     def get_index_output(self, index, ks, table, col):
         # a quoted index name (e.g. "FooIndex") is only correctly echoed by DESCRIBE
@@ -2031,3 +2032,19 @@ class CqlLoginTest(Tester):
             cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'])
         self.assertEqual([x for x in cqlsh_stdout.split() if x], ['ks1table'])
         self.assert_login_not_allowed('user1', cqlsh_stderr)
+
+    def test_list_roles_after_login(self):
+        """
+        @jira_ticket CASSANDRA-13640
+
+        Verifies that it is possible to list roles after a successful login.
+        """
+        out, err, _ = self.node1.run_cqlsh(
+            '''
+            CREATE ROLE super WITH superuser = true AND password = 'p' AND login = true;
+            LOGIN super 'p';
+            LIST ROLES;
+            ''',
+            cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'])
+        self.assertTrue('super' in out)
+        self.assertEqual('', err)

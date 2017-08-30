@@ -8,6 +8,7 @@ from multiprocessing import Process, Queue
 from unittest import skip, skipIf
 
 from cassandra import ConsistencyLevel
+from cassandra.cluster import NoHostAvailable
 from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
@@ -40,9 +41,9 @@ class TestMaterializedViews(Tester):
     @since 3.0
     """
 
-    def prepare(self, user_table=False, rf=1, options=None, nodes=3, **kwargs):
+    def prepare(self, user_table=False, rf=1, options=None, nodes=3, install_byteman=False, **kwargs):
         cluster = self.cluster
-        cluster.populate([nodes, 0])
+        cluster.populate([nodes, 0], install_byteman=install_byteman)
         if options:
             cluster.set_configuration_options(values=options)
         cluster.start()
@@ -227,7 +228,6 @@ class TestMaterializedViews(Tester):
 
         debug("wait that all batchlogs are replayed")
         self._replay_batchlogs()
-
         for i in xrange(5):
             for j in xrange(10000):
                 assert_one(session, "SELECT * FROM t_by_v WHERE id = {} AND v = {}".format(i, j), [j, i])
@@ -773,6 +773,74 @@ class TestMaterializedViews(Tester):
             ['TX', 'user1']
         )
 
+    def rename_column_test(self):
+        """
+        Test that a materialized view created with a 'SELECT *' works as expected when renaming a column
+        @expected_result The column is also renamed in the view.
+        """
+
+        session = self.prepare(user_table=True)
+
+        self._insert_data(session)
+
+        assert_one(
+            session,
+            "SELECT * FROM users_by_state WHERE state = 'TX' AND username = 'user1'",
+            ['TX', 'user1', 1968, 'f', 'ch@ngem3a', None]
+        )
+
+        session.execute("ALTER TABLE users RENAME username TO user")
+
+        results = list(session.execute("SELECT * FROM users_by_state WHERE state = 'TX' AND user = 'user1'"))
+        self.assertEqual(len(results), 1)
+        self.assertTrue(hasattr(results[0], 'user'), 'Column "user" not found')
+        assert_one(
+            session,
+            "SELECT state, user, birth_year, gender FROM users_by_state WHERE state = 'TX' AND user = 'user1'",
+            ['TX', 'user1', 1968, 'f']
+        )
+
+    def rename_column_atomicity_test(self):
+        """
+        Test that column renaming is atomically done between a table and its materialized views
+        @jira_ticket CASSANDRA-12952
+        """
+
+        session = self.prepare(nodes=1, user_table=True, install_byteman=True)
+        node = self.cluster.nodelist()[0]
+
+        self._insert_data(session)
+
+        assert_one(
+            session,
+            "SELECT * FROM users_by_state WHERE state = 'TX' AND username = 'user1'",
+            ['TX', 'user1', 1968, 'f', 'ch@ngem3a', None]
+        )
+
+        # Rename a column with an injected byteman rule to kill the node after the first schema update
+        self.allow_log_errors = True
+        script_version = '4x' if self.cluster.version() >= '4' else '3x'
+        node.byteman_submit(['./byteman/merge_schema_failure_{}.btm'.format(script_version)])
+        with self.assertRaises(NoHostAvailable):
+            session.execute("ALTER TABLE users RENAME username TO user")
+
+        debug('Restarting node')
+        node.stop()
+        node.start(wait_for_binary_proto=True)
+        session = self.patient_cql_connection(node, consistency_level=ConsistencyLevel.ONE)
+
+        # Both the table and its view should have the new schema after restart
+        assert_one(
+            session,
+            "SELECT * FROM ks.users WHERE state = 'TX' AND user = 'user1' ALLOW FILTERING",
+            ['user1', 1968, 'f', 'ch@ngem3a', None, 'TX']
+        )
+        assert_one(
+            session,
+            "SELECT * FROM ks.users_by_state WHERE state = 'TX' AND user = 'user1'",
+            ['TX', 'user1', 1968, 'f', 'ch@ngem3a', None]
+        )
+
     def lwt_test(self):
         """Test that lightweight transaction behave properly with a materialized view"""
 
@@ -995,8 +1063,9 @@ class TestMaterializedViews(Tester):
         # execution happening
 
         # Look for messages like:
-        #         Digest mismatch: org.apache.cassandra.service.DigestMismatchException: Mismatch for key DecoratedKey
-        regex = r"Digest mismatch: org.apache.cassandra.service.DigestMismatchException: Mismatch for key DecoratedKey"
+        #  4.0+        Digest mismatch: Mismatch for key DecoratedKey
+        # <4.0         Digest mismatch: org.apache.cassandra.service.DigestMismatchException: Mismatch for key DecoratedKey
+        regex = r"Digest mismatch: ([a-zA-Z.]+:\s)?Mismatch for key DecoratedKey"
         for event in trace.events:
             desc = event.description
             match = re.match(regex, desc)
@@ -1462,6 +1531,41 @@ class TestMaterializedViews(Tester):
             # Cleanup
             session.execute("DROP MATERIALIZED VIEW mv")
             session.execute("DROP TABLE test")
+
+    def propagate_view_creation_over_non_existing_table(self):
+        """
+        The internal addition of a view over a non existing table should be ignored
+        @jira_ticket CASSANDRA-13737
+        """
+
+        cluster = self.cluster
+        cluster.populate(3)
+        cluster.start()
+        node1, node2, node3 = self.cluster.nodelist()
+        session = self.patient_cql_connection(node1, consistency_level=ConsistencyLevel.QUORUM)
+        create_ks(session, 'ks', 3)
+
+        session.execute('CREATE TABLE users (username varchar PRIMARY KEY, state varchar)')
+
+        # create a materialized view only in nodes 1 and 2
+        node3.stop(wait_other_notice=True)
+        session.execute(('CREATE MATERIALIZED VIEW users_by_state AS '
+                         'SELECT * FROM users WHERE state IS NOT NULL AND username IS NOT NULL '
+                         'PRIMARY KEY (state, username)'))
+
+        # drop the base table only in node 3
+        node1.stop(wait_other_notice=True)
+        node2.stop(wait_other_notice=True)
+        node3.start(wait_for_binary_proto=True)
+        session = self.patient_cql_connection(node3, consistency_level=ConsistencyLevel.QUORUM)
+        session.execute('DROP TABLE ks.users')
+
+        # restart the cluster
+        cluster.stop()
+        cluster.start()
+
+        # node3 should have received and ignored the creation of the MV over the dropped table
+        self.assertTrue(node3.grep_log('Not adding view users_by_state because the base table'))
 
 
 # For read verification
