@@ -1251,12 +1251,25 @@ class TestMutations(ThriftTester):
 
         session.execute('USE "Keyspace1"')
 
-        assert_all(session, "SELECT * FROM \"Super1\"", [["key1", "sc1", 4, "value4"],
-                                                         ["key1", "sc2", 5, "value5"],
-                                                         ["key1", "sc2", 6, "value6"],
-                                                         ["key2", "sc1", 4, "value4"],
-                                                         ["key2", "sc2", 5, "value5"],
-                                                         ["key2", "sc2", 6, "value6"]])
+        assert_all(session, "SELECT * FROM \"Super1\"",
+                   [["key1", "sc1", 4, "value4"],
+                    ["key1", "sc2", 5, "value5"],
+                    ["key1", "sc2", 6, "value6"],
+                    ["key2", "sc1", 4, "value4"],
+                    ["key2", "sc2", 5, "value5"],
+                    ["key2", "sc2", 6, "value6"]])
+
+        assert_all(session, "SELECT * FROM \"Super1\" WHERE key=textAsBlob('key1')",
+                   [["key1", "sc1", 4, "value4"],
+                    ["key1", "sc2", 5, "value5"],
+                    ["key1", "sc2", 6, "value6"]])
+
+        assert_all(session, "SELECT * FROM \"Super1\" WHERE key=textAsBlob('key1') AND column1=textAsBlob('sc2')",
+                   [["key1", "sc2", 5, "value5"],
+                   ["key1", "sc2", 6, "value6"]])
+
+        assert_all(session, "SELECT * FROM \"Super1\" WHERE key=textAsBlob('key1') AND column1=textAsBlob('sc2') AND column2 = 5",
+                   [["key1", "sc2", 5, "value5"]])
 
         assert_all(session, "SELECT * FROM \"Super1\" WHERE key = textAsBlob('key1') AND column1 = textAsBlob('sc2')",
                    [["key1", "sc2", 5, "value5"],
