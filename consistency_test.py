@@ -2,6 +2,7 @@ import Queue
 import sys
 import threading
 import time
+import re
 from collections import OrderedDict, namedtuple
 from copy import deepcopy
 
@@ -10,11 +11,12 @@ from cassandra.query import SimpleStatement
 from nose.plugins.attrib import attr
 from nose.tools import assert_greater_equal
 
-from tools.assertions import assert_length_equal, assert_none, assert_unavailable
+from tools.assertions import assert_length_equal, assert_none, assert_unavailable, assert_one, assert_all
 from dtest import DISABLE_VNODES, MultiError, Tester, debug, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns,
                         query_c1c2, rows_to_list)
 from tools.decorators import since
+
 
 ExpectedConsistency = namedtuple('ExpectedConsistency', ('num_write_nodes', 'num_read_nodes', 'is_strong'))
 
@@ -963,14 +965,19 @@ class TestConsistency(Tester):
         assert_none(session, "SELECT * FROM t WHERE id = 0 LIMIT 1", cl=ConsistencyLevel.QUORUM)
 
     @since('3.0')
-    def short_read_partitions_delete_with_limit_test(self):
-        self._short_read_partitions_delete_test(use_limit=True)
+    def short_read_partitions_protection_with_limit_test(self):
+        self._short_read_partitions_protection_test(use_limit=True)
 
     @since('3.0')
-    def short_read_partitions_delete_with_fetchsize_test(self):
-        self._short_read_partitions_delete_test(use_limit=False)
+    def short_read_partitions_protection_with_fetchsize_test(self):
+        self._short_read_partitions_protection_test(use_limit=False)
 
-    def _short_read_partitions_delete_test(self, use_limit=True):
+    def _short_read_partitions_protection_test(self, use_limit=True):
+        """
+        To add support for cross-partition short-read-protection
+
+        @jira_ticket CASSANDRA-13595
+        """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
@@ -997,16 +1004,64 @@ class TestConsistency(Tester):
         node1.stop(wait_other_notice=True)
         session = self.patient_cql_connection(node2, 'ks', consistency_level=ConsistencyLevel.ONE)
         session.execute(SimpleStatement("DELETE FROM t USING TIMESTAMP 4 WHERE k = 2"))
-        node1.start(wait_other_notice=True)
+        node1.start(wait_other_notice=True, wait_for_binary_proto=True)
 
-        # read from both nodes
+        # read from both nodes, data will be repaired
+        session = self.patient_cql_connection(node1, 'ks', consistency_level=ConsistencyLevel.ALL)
+        result = None
         if use_limit:
-            session = self.patient_cql_connection(node1, 'ks', consistency_level=ConsistencyLevel.ALL)
-            assert_none(session, "SELECT * FROM t LIMIT 1")
+            result = session.execute("SELECT * FROM t LIMIT 1", trace=True)
         else:
-            session = self.patient_cql_connection(node1, 'ks', consistency_level=ConsistencyLevel.ALL)
             session.default_fetch_size = 1
-            assert_none(session, "SELECT * FROM t")
+            result = session.execute("SELECT * FROM t", trace=True)
+        assert_length_equal(result.current_rows, 0)
+        # 1 for each replica
+        self.assertEqual(2, self.check_trace_events(result.get_query_trace(), r"\b for short read partition protection"))
+
+        # we write 3 in a partition: all nodes get it.
+        session.execute(SimpleStatement("INSERT INTO t (k, c) VALUES (3, 1) USING TIMESTAMP 2", consistency_level=ConsistencyLevel.ALL))
+
+        if use_limit:
+            assert_one(session, "SELECT * FROM t LIMIT 1", [3, 1])
+            result = session.execute("SELECT * FROM t LIMIT 1", trace=True)
+        else:
+            session.default_fetch_size = 1
+            assert_one(session, "SELECT * FROM t", [3, 1])
+            result = session.execute("SELECT * FROM t", trace=True)
+        assert_length_equal(result.current_rows, 1)
+        # data is repaired, reached limit, no cross-partition repair is triggered
+        self.assertEqual(0, self.check_trace_events(result.get_query_trace(), r"\b for short read partition protection"))
+
+        # add partition 0: only node 2 gets it.
+        node1.flush()
+        node1.stop(wait_other_notice=True)
+        session = self.patient_cql_connection(node2, 'ks', consistency_level=ConsistencyLevel.ONE)
+        session.execute(SimpleStatement("INSERT INTO t (k, c) VALUES (0, 1) USING TIMESTAMP 2"))
+        node1.start(wait_other_notice=True, wait_for_binary_proto=True)
+
+        session = self.patient_cql_connection(node2, 'ks', consistency_level=ConsistencyLevel.ALL)
+        if use_limit:
+            assert_all(session, "SELECT * FROM t LIMIT 2", [[0, 1], [3, 1]])
+        else:
+            session.default_fetch_size = 1
+            assert_all(session, "SELECT * FROM t", [[0, 1], [3, 1]])
+
+        # test single partition read, no cross-partition repair is triggered
+        if use_limit:
+            result = session.execute("SELECT * FROM t WHERE k = 1 LIMIT 1", trace=True)
+        else:
+            result = session.execute("SELECT * FROM t WHERE k = 1", trace=True)
+        assert_length_equal(result.current_rows, 0)
+        self.assertEqual(0, self.check_trace_events(result.get_query_trace(), r"\b for short read partition protection"))
+
+    def check_trace_events(self, trace, pattern):
+        count = 0
+        for event in trace.events:
+            desc = event.description
+            match = re.search(pattern, desc)
+            if match:
+                count += 1
+        return count
 
     def readrepair_test(self):
         cluster = self.cluster
