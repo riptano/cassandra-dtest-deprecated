@@ -223,6 +223,31 @@ class TestBootstrap(BaseBootstrapTest):
         new_rows = list(session.execute("SELECT * FROM %s" % (stress_table,)))
         self.assertEquals(original_rows, new_rows)
 
+    def test_bootstrap_waits_for_streaming_to_finish(self):
+        """
+        Test that bootstrap completes and is marked as such after streaming finishes.
+        """
+
+        cluster = self.cluster
+
+        debug("Create a cluster")
+        cluster.populate(1)
+        node1 = cluster.nodelist()[0]
+
+        debug("Start node 1")
+        node1.start(wait_for_binary_proto=True, wait_other_notice=True)
+
+        debug("Insert 10k rows")
+        node1.stress(['write', 'n=10K', 'no-warmup', '-rate', 'threads=8', '-schema', 'replication(factor=2)'])
+
+        debug("Bootstrap node 2 with delay")
+        node2 = new_node(cluster, byteman_port='4200')
+        node2.update_startup_byteman_script('./byteman/bootstrap_5s_sleep.btm')
+        node2.start(wait_for_binary_proto=True, wait_other_notice=True)
+
+        assert_bootstrap_state(self, node2, 'COMPLETED')
+        self.assertTrue(node2.grep_log('Bootstrap completed', filename='debug.log'))
+
     def consistent_range_movement_true_with_replica_down_should_fail_test(self):
         self._bootstrap_test_with_replica_down(True)
 
