@@ -1,5 +1,7 @@
 ## Warning: You should be committing to the ASF dtest repo, not here. Mirror at github.com/apache/cassandra-dtest.
 
+## Warning: For DSE related work please contribute to github.com/riptano/apollo-dtest.
+
 Cassandra Distributed Tests
 ===========================
 
