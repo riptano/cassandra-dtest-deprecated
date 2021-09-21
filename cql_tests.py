@@ -9,6 +9,8 @@ from cassandra.metadata import NetworkTopologyStrategy, SimpleStrategy
 from cassandra.policies import FallthroughRetryPolicy
 from cassandra.protocol import ProtocolException
 from cassandra.query import SimpleStatement
+from cassandra.util import OrderedMapSerializedKey
+from cassandra.cqltypes import lookup_casstype
 
 from dtest import ReusableClusterTester, debug, Tester, create_ks
 from distutils.version import LooseVersion
@@ -418,6 +420,67 @@ class StorageProxyCQLTester(CQLTester):
 
         with self.assertRaises(InvalidRequest):
             session.execute("SELECT * FROM test_filter WHERE k2 > 0")
+
+    @since('3.10')
+    def partition_key_contains_filtering_test(self):
+        """
+        Filtering on partition key with CONTAINS
+
+        @jira_ticket CASSANDRA-13275
+        """
+        session = self.prepare()
+
+        cf = "test_contains_filtering"
+        session.execute("""
+            CREATE TABLE IF NOT EXISTS {} (
+                pk frozen<map<int, int>>,
+                ck int,
+                v int,
+                PRIMARY KEY (pk, ck)
+            )
+        """.format(cf))
+
+        for i in range(0, 10):
+            session.execute("INSERT INTO {} (pk, ck, v) VALUES ({{ {}:{} }}, {}, {})".format(cf, i, i, 1, 1))
+            session.execute("INSERT INTO {} (pk, ck, v) VALUES ({{ {}:{} }}, {}, {})".format(cf, i, i, 10, 10))
+            session.execute("INSERT INTO {} (pk, ck, v) VALUES ({{ {}:{}, 100: 200 }}, {}, {})".format(cf, i, i, 2, 2))
+            session.execute("INSERT INTO {} (pk, ck, v) VALUES ({{ {}:{}, 100: 200 }}, {}, {})".format(cf, i, i, 20, 20))
+            session.execute("INSERT INTO {} (pk, ck, v) VALUES ({{ {}:{}, 100: 200, 300: 400 }}, {}, {})".format(cf, i, i, 3, 3))
+            session.execute("INSERT INTO {} (pk, ck, v) VALUES ({{ {}:{}, 100: 200, 300: 400 }}, {}, {})".format(cf, i, i, 30, 3))
+
+        def om(m):
+            t = lookup_casstype('Int32Type')
+            protocol_version = 3
+            res = OrderedMapSerializedKey(t, protocol_version)
+            for k, v in m:
+                res._insert(k, v)
+            return res
+
+        assert_all(session,
+                   "SELECT * FROM {} WHERE pk CONTAINS KEY 5 ALLOW FILTERING".format(cf),
+                   [[om([(5, 5)]), 1, 1],
+                    [om([(5, 5)]), 10, 10],
+                    [om([(5, 5), (100, 200)]), 2, 2],
+                    [om([(5, 5), (100, 200)]), 20, 20],
+                    [om([(5, 5), (100, 200), (300, 400)]), 3, 3],
+                    [om([(5, 5), (100, 200), (300, 400)]), 30, 3]], ignore_order=True, sort_lambda = lambda x: x[2])
+
+        assert_all(session,
+                   "SELECT * FROM {} WHERE pk CONTAINS KEY 5 AND pk CONTAINS 200 ALLOW FILTERING".format(cf),
+                   [[om([(5, 5), (100, 200)]), 2, 2],
+                    [om([(5, 5), (100, 200)]), 20, 20],
+                    [om([(5, 5), (100, 200), (300, 400)]), 3, 3],
+                    [om([(5, 5), (100, 200), (300, 400)]), 30, 3]], ignore_order=True, sort_lambda = lambda x: x[2])
+
+        assert_all(session,
+                   "SELECT * FROM {} WHERE pk CONTAINS KEY 5 AND pk CONTAINS 200 AND v = 3 ALLOW FILTERING".format(cf),
+                   [[om([(5, 5), (100, 200), (300, 400)]), 3, 3],
+                    [om([(5, 5), (100, 200), (300, 400)]), 30, 3]], ignore_order=True, sort_lambda = lambda x: x[2])
+
+        assert_all(session,
+                   "SELECT * FROM {} WHERE pk CONTAINS KEY 5 AND pk CONTAINS 200 AND ck = 30 AND  v = 3 ALLOW FILTERING".format(cf),
+                   [[om([(5, 5), (100, 200), (300, 400)]), 30, 3]], ignore_order=True)
+
 
     def batch_test(self):
         """

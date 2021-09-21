@@ -147,7 +147,7 @@ def assert_none(session, query, cl=None):
     assert list_res == [], "Expected nothing from {}, but got {}".format(query, list_res)
 
 
-def assert_all(session, query, expected, cl=None, ignore_order=False, timeout=None):
+def assert_all(session, query, expected, cl=None, ignore_order=False, sort_lambda = lambda x: x, timeout=None):
     """
     Assert query returns all expected items optionally in the correct order
     @param session Session in use
@@ -165,8 +165,8 @@ def assert_all(session, query, expected, cl=None, ignore_order=False, timeout=No
     res = session.execute(simple_query) if timeout is None else session.execute(simple_query, timeout=timeout)
     list_res = _rows_to_list(res)
     if ignore_order:
-        expected = sorted(expected)
-        list_res = sorted(list_res)
+        expected = sorted(expected, key=sort_lambda)
+        list_res = sorted(list_res, key=sort_lambda)
     assert list_res == expected, "Expected {} from {}, but got {}".format(expected, query, list_res)
 
 
