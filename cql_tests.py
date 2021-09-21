@@ -1434,3 +1434,45 @@ class LWTTester(ReusableClusterTester):
         node1 = self.cluster.nodelist()[0]
         self.cluster.flush()
         assert_one(session, "UPDATE test SET v1 = 100 WHERE pk = 'test1' IF v2 = null;", [True])
+
+
+@since('3.4')
+class SASITester(CQLTester):
+    """
+    Distributed Tests for SASI functionality
+    """
+    @since('3.11')
+    def multinode_full_text_search(self):
+        """
+        Test SASI full text search queries in multi-node environment
+
+        @jira_ticket CASSANDRA-13512
+        """
+        cluster = self.cluster
+
+        cluster.populate(3).start()
+
+        node = cluster.nodelist()[0]
+        session = self.patient_cql_connection(node)
+
+        create_ks(session, 'ks', 1)
+        session.execute("""
+            CREATE TABLE test1 (
+                id int,
+                val text,
+                PRIMARY KEY(id)
+            );
+        """)
+
+        session.execute("""
+        CREATE CUSTOM INDEX ON test1 (val) USING 'org.apache.cassandra.index.sasi.SASIIndex'
+        WITH OPTIONS = {'analyzer_class' : 'org.apache.cassandra.index.sasi.analyzer.StandardAnalyzer',
+                        'mode' : 'CONTAINS'}
+        """)
+
+        for i in range(1, 6):
+            session.execute("INSERT INTO test1 (id, val) VALUES ({}, 'hello')".format(i))
+
+        for i in range(0, 2):
+            assert_all(session, "SELECT * FROM test1 where val LIKE '%ell%'",
+                       [[i, 'hello'] for i in range(1, 6)], ignore_order=True)
